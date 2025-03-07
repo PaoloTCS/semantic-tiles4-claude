@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 /**
  * DomainForm component for creating new domain nodes
  */
-const DomainForm = ({ onAdd }) => {
+const DomainForm = ({ onAdd, currentDomain, isSubdomain }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -23,14 +23,29 @@ const DomainForm = ({ onAdd }) => {
     <div className="domain-form">
       {isExpanded ? (
         <form onSubmit={handleSubmit}>
+          {/* Added header showing current parent domain if adding a subdomain */}
+          <div className="form-header">
+            {isSubdomain ? (
+              <h3 className="subdomain-header">
+                Add Subdomain to "{currentDomain?.name || 'Domain'}"
+              </h3>
+            ) : (
+              <h3>Add Domain</h3>
+            )}
+          </div>
+          
           <div className="form-group">
-            <label htmlFor="domain-name">Domain Name</label>
+            <label htmlFor="domain-name">
+              {isSubdomain ? 'Subdomain Name' : 'Domain Name'}
+            </label>
             <input
               id="domain-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter domain name..."
+              placeholder={isSubdomain ? 
+                `Enter subdomain name for ${currentDomain?.name}...` : 
+                "Enter domain name..."}
               required
               autoFocus
             />
@@ -60,7 +75,7 @@ const DomainForm = ({ onAdd }) => {
               className="submit-button"
               disabled={name.trim() === ''}
             >
-              Add Domain
+              {isSubdomain ? 'Add Subdomain' : 'Add Domain'}
             </button>
           </div>
         </form>
@@ -69,7 +84,7 @@ const DomainForm = ({ onAdd }) => {
           className="add-domain-button" 
           onClick={() => setIsExpanded(true)}
         >
-          + Add Domain
+          {isSubdomain ? `+ Add Subdomain to "${currentDomain?.name}"` : '+ Add Domain'}
         </button>
       )}
     </div>

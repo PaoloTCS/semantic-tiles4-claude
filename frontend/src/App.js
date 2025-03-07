@@ -44,6 +44,9 @@ function App() {
   // Error state
   const [error, setError] = useState(null);
   
+  // Success message state
+  const [success, setSuccess] = useState(null);
+  
   // Sidebar visible state
   const [sidebarVisible, setSidebarVisible] = useState(true);
   
@@ -109,7 +112,11 @@ function App() {
   
   // Load domain path for breadcrumbs
   const loadDomainPath = useCallback(async () => {
-    if (!currentParentId) return;
+    if (!currentParentId) {
+      setBreadcrumbPath([]);
+      setCurrentDomain(null);
+      return;
+    }
     
     try {
       const path = await fetchDomainPath(currentParentId);
@@ -117,10 +124,10 @@ function App() {
       
       // Set current domain
       if (path.length > 0) {
-        setCurrentDomain(path[path.length - 1]);
+        const currentPathDomain = path[path.length - 1];
+        setCurrentDomain(currentPathDomain);
         
         // Track activity for current domain
-        const currentPathDomain = path[path.length - 1];
         trackActivity(
           'domain_view', 
           `Domain: ${currentPathDomain.name} - ${currentPathDomain.description || ''}`,
@@ -129,6 +136,11 @@ function App() {
         
         // Cache the path for resilience
         sessionStorage.setItem(`path:${currentParentId}`, JSON.stringify(path));
+        
+        // Display information about the current level in console for debugging
+        console.log(`Current domain: ${currentPathDomain.name}`);
+        console.log(`Children count: ${currentPathDomain.children?.length || 0}`);
+        console.log(`Documents count: ${currentPathDomain.documents?.length || 0}`);
       }
     } catch (err) {
       console.error('Error loading domain path:', err);
@@ -176,6 +188,14 @@ function App() {
         { domainName: name, parentId: currentParentId }
       );
       
+      // Show success message
+      setSuccess(`Successfully created ${currentParentId ? 'subdomain' : 'domain'}: ${name}`);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      
       // Refresh domains
       loadDomains();
     } catch (err) {
@@ -187,21 +207,44 @@ function App() {
   // Handle deleting a domain
   const handleDeleteDomain = async (domainId) => {
     try {
+      setLoading(true); // Show loading state
+      
+      const domainToDelete = domains.find(d => d.id === domainId);
+      const domainName = domainToDelete ? domainToDelete.name : domainId;
+      
       await deleteDomain(domainId);
       
       // Track activity
-      const domainToDelete = domains.find(d => d.id === domainId);
       trackActivity(
         'domain_delete', 
-        `Deleted domain: ${domainToDelete ? domainToDelete.name : domainId}`,
+        `Deleted domain: ${domainName}`,
         { domainId }
       );
+      
+      // Clear selected document if it belonged to the deleted domain
+      if (currentDocument && domains.find(d => 
+        d.documents && d.documents.some(doc => doc.id === currentDocument.id)
+      )) {
+        setCurrentDocument(null);
+      }
+      
+      // Show success message temporarily
+      setError(null);
+      const successMessage = `Successfully deleted domain: ${domainName}`;
+      setSuccess(successMessage);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
       
       // Refresh domains
       loadDomains();
     } catch (err) {
       console.error('Error deleting domain:', err);
-      setError('Failed to delete domain. Please try again.');
+      setError(`Failed to delete domain: ${err.response?.data?.error || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -281,9 +324,20 @@ function App() {
               />
             </ErrorBoundary>
             
+            {/* Success message */}
+            {success && (
+              <div className="success-message">
+                {success}
+              </div>
+            )}
+            
             {/* Domain form */}
             <ErrorBoundary fallback={<div>Error in domain form component</div>}>
-              <DomainForm onAdd={handleAddDomain} />
+              <DomainForm 
+                onAdd={handleAddDomain} 
+                currentDomain={currentDomain}
+                isSubdomain={currentParentId !== null}
+              />
             </ErrorBoundary>
             
             {/* Document upload form (only visible when inside a domain) */}

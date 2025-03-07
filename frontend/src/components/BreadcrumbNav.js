@@ -22,6 +22,10 @@ const BreadcrumbNav = ({ path = [], onNavigate }) => {
             <button 
               className="breadcrumb-link" 
               onClick={() => onNavigate(item.id)}
+              // Highlight the current domain
+              style={{
+                fontWeight: index === path.length - 1 ? 'bold' : 'normal'
+              }}
             >
               {item.name}
             </button>

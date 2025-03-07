@@ -25,7 +25,6 @@ const VoronoiDiagram = ({
     svg.selectAll('*').remove();
     
     // Create a simple force-directed layout for now
-    // In a real implementation, this would use the semantic distances
     const simulation = d3.forceSimulation(domains)
       .force('charge', d3.forceManyBody().strength(-200))
       .force('center', d3.forceCenter(width / 2, height / 2))
@@ -40,8 +39,8 @@ const VoronoiDiagram = ({
         for (let j = i + 1; j < domains.length; j++) {
           const source = domains[i].id;
           const target = domains[j].id;
-          const distanceKey = `${source}-${target}`;
-          const reverseKey = `${target}-${source}`;
+          const distanceKey = `${source}|${target}`;
+          const reverseKey = `${target}|${source}`;
           
           if (semanticDistances[distanceKey] || semanticDistances[reverseKey]) {
             const distance = semanticDistances[distanceKey] || semanticDistances[reverseKey];
@@ -77,17 +76,20 @@ const VoronoiDiagram = ({
       .enter()
       .append('g')
       .attr('class', 'domain-node')
+      .attr('cursor', 'pointer')
       .on('click', (event, d) => {
+        // Simple click to select AND navigate
         event.stopPropagation();
-        if (selectedDomain === d.id) {
-          setSelectedDomain(null);
-        } else {
-          setSelectedDomain(d.id);
-        }
-      })
-      .on('dblclick', (event, d) => {
-        event.stopPropagation();
+        
+        // Navigate directly into the domain
         onDomainClick(d);
+      });
+      
+    // Add tooltip for navigation hint
+    domainNodes.append('title')
+      .text(d => {
+        const hasChildren = d.children && d.children.length > 0;
+        return `${d.name}${hasChildren ? ' (click to view subdomains)' : ''}`;
       });
     
     // Add domain circles
@@ -97,8 +99,9 @@ const VoronoiDiagram = ({
         const color = d3.scaleOrdinal(d3.schemeCategory10);
         return color(i);
       })
-      .attr('stroke', '#fff')
-      .attr('stroke-width', 2);
+      // Add special stroke for domains with children to indicate they can be navigated
+      .attr('stroke', d => d.children && d.children.length > 0 ? '#FFD700' : '#fff')
+      .attr('stroke-width', d => d.children && d.children.length > 0 ? 3 : 2);
     
     // Add domain labels
     domainNodes.append('text')
@@ -110,6 +113,64 @@ const VoronoiDiagram = ({
       .attr('font-size', '14px')
       .attr('pointer-events', 'none');
     
+    // Add indicator for domains with children
+    domainNodes.filter(d => d.children && d.children.length > 0)
+      .append('text')
+      .text('▼')
+      .attr('text-anchor', 'middle')
+      .attr('dy', -25)
+      .attr('fill', '#FFD700')
+      .attr('font-weight', 'bold')
+      .attr('font-size', '12px')
+      .attr('pointer-events', 'none');
+    
+    // Add delete button to each domain
+    domainNodes.each(function(d) {
+      const node = d3.select(this);
+      
+      // Add delete button (small circle with X)
+      const deleteGroup = node.append('g')
+        .attr('class', 'delete-button')
+        .attr('transform', `translate(30, -30)`)
+        .style('opacity', 0)  // Hidden by default
+        .on('click', (event) => {
+          event.stopPropagation();
+          if (window.confirm(`Are you sure you want to delete the domain "${d.name}"?`)) {
+            onDeleteDomain(d.id);
+          }
+        });
+        
+      // Delete button background
+      deleteGroup.append('circle')
+        .attr('r', 12)
+        .attr('fill', '#dc3545')
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 1.5);
+        
+      // X symbol
+      deleteGroup.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', 4)
+        .attr('fill', '#fff')
+        .attr('font-weight', 'bold')
+        .attr('pointer-events', 'none')
+        .text('×');
+    });
+    
+    // Show delete button on hover
+    domainNodes.on('mouseover', function() {
+      d3.select(this).select('.delete-button')
+        .transition()
+        .duration(200)
+        .style('opacity', 1);
+    })
+    .on('mouseout', function() {
+      d3.select(this).select('.delete-button')
+        .transition()
+        .duration(200)
+        .style('opacity', 0);
+    });
+    
     // Update positions on simulation tick
     simulation.on('tick', () => {
       domainNodes.attr('transform', d => {
@@ -120,93 +181,8 @@ const VoronoiDiagram = ({
       });
     });
     
-    // Handle selected domain - show documents
+    // Clear selected domain on svg click
     svg.on('click', () => setSelectedDomain(null));
-    
-    // Show documents for selected domain
-    if (selectedDomain) {
-      const domain = domains.find(d => d.id === selectedDomain);
-      
-      if (domain && domain.documents && domain.documents.length > 0) {
-        // Find the domain node position
-        const domainNode = domains.find(d => d.id === selectedDomain);
-        
-        // Create document list
-        const documentsGroup = g.append('g')
-          .attr('class', 'documents-panel')
-          .attr('transform', `translate(${domainNode.x + 80}, ${domainNode.y - 100})`);
-        
-        // Add panel background
-        documentsGroup.append('rect')
-          .attr('width', 200)
-          .attr('height', Math.min(domain.documents.length * 30 + 40, 300))
-          .attr('fill', '#f8f9fa')
-          .attr('stroke', '#dee2e6')
-          .attr('rx', 5)
-          .attr('ry', 5);
-        
-        // Add title
-        documentsGroup.append('text')
-          .text('Documents')
-          .attr('x', 10)
-          .attr('y', 20)
-          .attr('font-weight', 'bold');
-        
-        // Add delete domain button
-        documentsGroup.append('text')
-          .text(' Delete Domain')
-          .attr('x', 10)
-          .attr('y', Math.min(domain.documents.length * 30 + 35, 295))
-          .attr('class', 'delete-domain-btn')
-          .attr('fill', '#dc3545')
-          .attr('cursor', 'pointer')
-          .on('click', (event) => {
-            event.stopPropagation();
-            if (window.confirm(`Are you sure you want to delete the domain "${domain.name}"?`)) {
-              onDeleteDomain(domain.id);
-            }
-          });
-        
-        // Add document list
-        const documentItems = documentsGroup.selectAll('.document-item')
-          .data(domain.documents.slice(0, 8)) // Limit to 8 docs for simplicity
-          .enter()
-          .append('g')
-          .attr('class', 'document-item')
-          .attr('transform', (d, i) => `translate(10, ${i * 30 + 40})`)
-          .on('click', (event, d) => {
-            event.stopPropagation();
-            onDocumentClick(d);
-          });
-        
-        // Add document icons
-        documentItems.append('text')
-          .text('=�')
-          .attr('x', 0)
-          .attr('y', 0)
-          .attr('dy', '0.5em');
-        
-        // Add document names
-        documentItems.append('text')
-          .text(d => d.name.length > 20 ? d.name.substring(0, 18) + '...' : d.name)
-          .attr('x', 25)
-          .attr('y', 0)
-          .attr('dy', '0.5em')
-          .attr('cursor', 'pointer')
-          .attr('fill', '#0366d6');
-        
-        // Show "more" if there are more documents
-        if (domain.documents.length > 8) {
-          documentsGroup.append('text')
-            .text(`+ ${domain.documents.length - 8} more...`)
-            .attr('x', 10)
-            .attr('y', 8 * 30 + 40)
-            .attr('dy', '0.5em')
-            .attr('font-style', 'italic')
-            .attr('fill', '#6c757d');
-        }
-      }
-    }
     
     return () => {
       simulation.stop();
