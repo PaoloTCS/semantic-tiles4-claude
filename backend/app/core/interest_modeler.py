@@ -17,18 +17,39 @@ from collections import Counter, defaultdict
 import torch
 
 # Import sentence transformers for embedding generation
-from sentence_transformers import SentenceTransformer
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    logger.warning("sentence-transformers not available, using dummy embeddings")
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 # Import NLTK for text preprocessing
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
+try:
+    import nltk
+    from nltk.corpus import stopwords
+    from nltk.tokenize import word_tokenize
+    from nltk.stem import WordNetLemmatizer
+    NLTK_AVAILABLE = True
+except ImportError:
+    logger.warning("NLTK not available, using simple text processing")
+    NLTK_AVAILABLE = False
 
 # Import FAISS for efficient similarity search
-import faiss
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import DBSCAN
+try:
+    import faiss
+    FAISS_AVAILABLE = True
+except ImportError:
+    logger.warning("FAISS not available, similarity search disabled")
+    FAISS_AVAILABLE = False
+
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.cluster import DBSCAN
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    logger.warning("scikit-learn not available, using simple keyword extraction")
+    SKLEARN_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -54,38 +75,45 @@ class InterestModeler:
         os.makedirs(self.cache_dir, exist_ok=True)
         os.makedirs(self.model_dir, exist_ok=True)
         
-        # Download NLTK resources if not available
-        try:
-            nltk.data.find('tokenizers/punkt')
-            nltk.data.find('corpora/stopwords')
-            nltk.data.find('corpora/wordnet')
-        except LookupError:
-            nltk.download('punkt')
-            nltk.download('stopwords')
-            nltk.download('wordnet')
-        
-        self.lemmatizer = WordNetLemmatizer()
-        self.stop_words = set(stopwords.words('english'))
-        
         # Initialize device
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
-        # Load or initialize sentence transformer model
-        try:
-            model_path = os.path.join(self.model_dir, 'all-MiniLM-L6-v2')
-            if os.path.exists(model_path):
-                self.model = SentenceTransformer(model_path, device=self.device)
-            else:
-                self.model = SentenceTransformer('all-MiniLM-L6-v2', device=self.device)
-                self.model.save(model_path)
-        except Exception as e:
-            logger.error(f"Error loading sentence transformer: {e}")
-            # Fallback to a smaller model if available
+        # Initialize NLTK if available
+        if NLTK_AVAILABLE:
             try:
-                self.model = SentenceTransformer('paraphrase-MiniLM-L3-v2', device=self.device)
-            except:
-                logger.error("Failed to load even the fallback model")
-                raise
+                # Download NLTK resources if not available
+                try:
+                    nltk.data.find('tokenizers/punkt')
+                    nltk.data.find('corpora/stopwords')
+                    nltk.data.find('corpora/wordnet')
+                except LookupError:
+                    nltk.download('punkt')
+                    nltk.download('stopwords')
+                    nltk.download('wordnet')
+                
+                self.lemmatizer = WordNetLemmatizer()
+                self.stop_words = set(stopwords.words('english'))
+            except Exception as e:
+                logger.warning(f"NLTK initialization failed: {e}")
+                NLTK_AVAILABLE = False
+        
+        # Load or initialize sentence transformer model if available
+        if SENTENCE_TRANSFORMERS_AVAILABLE:
+            try:
+                model_path = os.path.join(self.model_dir, 'all-MiniLM-L6-v2')
+                if os.path.exists(model_path):
+                    self.model = SentenceTransformer(model_path, device=self.device)
+                else:
+                    self.model = SentenceTransformer('all-MiniLM-L6-v2', device=self.device)
+                    self.model.save(model_path)
+            except Exception as e:
+                logger.error(f"Error loading sentence transformer: {e}")
+                # Fallback to a smaller model if available
+                try:
+                    self.model = SentenceTransformer('paraphrase-MiniLM-L3-v2', device=self.device)
+                except Exception as fallback_error:
+                    logger.error(f"Failed to load fallback model: {fallback_error}")
+                    SENTENCE_TRANSFORMERS_AVAILABLE = False
         
         # Initialize FAISS index for document similarity search
         self.doc_index = None
@@ -194,25 +222,55 @@ class InterestModeler:
     
     def initialize_doc_index(self):
         """Initialize or load FAISS index for document similarity search."""
-        index_path = os.path.join(self.cache_dir, 'faiss_index.bin')
-        lookup_path = os.path.join(self.cache_dir, 'document_lookup.pkl')
-        
-        if os.path.exists(index_path) and os.path.exists(lookup_path):
-            try:
-                self.doc_index = faiss.read_index(index_path)
-                with open(lookup_path, 'rb') as f:
-                    self.doc_lookup = pickle.load(f)
-            except Exception as e:
-                logger.error(f"Error loading index: {str(e)}")
+        if not FAISS_AVAILABLE:
+            logger.warning("FAISS not available, document similarity search disabled")
+            self.doc_index = None
+            self.doc_lookup = {}
+            return
+            
+        try:
+            index_path = os.path.join(self.cache_dir, 'faiss_index.bin')
+            lookup_path = os.path.join(self.cache_dir, 'document_lookup.pkl')
+            
+            if os.path.exists(index_path) and os.path.exists(lookup_path):
+                try:
+                    self.doc_index = faiss.read_index(index_path)
+                    with open(lookup_path, 'rb') as f:
+                        self.doc_lookup = pickle.load(f)
+                except Exception as e:
+                    logger.error(f"Error loading index: {str(e)}")
+                    self.create_new_doc_index()
+            else:
                 self.create_new_doc_index()
-        else:
-            self.create_new_doc_index()
+        except Exception as e:
+            logger.error(f"Error initializing document index: {str(e)}")
+            self.doc_index = None
+            self.doc_lookup = {}
     
     def create_new_doc_index(self):
         """Create a new FAISS index for document embeddings."""
-        dimension = self.model.get_sentence_embedding_dimension()
-        self.doc_index = faiss.IndexFlatIP(dimension)  # Inner product for cosine similarity
-        self.doc_lookup = {}
+        if not FAISS_AVAILABLE:
+            logger.warning("FAISS not available, cannot create document index")
+            self.doc_index = None
+            self.doc_lookup = {}
+            return
+            
+        try:
+            # Get dimension from model or use standard size
+            if SENTENCE_TRANSFORMERS_AVAILABLE and hasattr(self, 'model'):
+                try:
+                    dimension = self.model.get_sentence_embedding_dimension()
+                except:
+                    dimension = 768  # Standard BERT embedding size
+            else:
+                dimension = 768
+                
+            self.doc_index = faiss.IndexFlatIP(dimension)  # Inner product for cosine similarity
+            self.doc_lookup = {}
+        except Exception as e:
+            logger.error(f"Error creating new document index: {str(e)}")
+            self.doc_index = None
+            self.doc_lookup = {}
     
     def save_doc_index(self):
         """Save the FAISS index and document lookup to disk."""
@@ -236,17 +294,25 @@ class InterestModeler:
         Returns:
             Preprocessed text
         """
-        # Tokenize
-        tokens = word_tokenize(text.lower())
+        if not NLTK_AVAILABLE:
+            # Simple fallback preprocessing
+            return text.lower()
         
-        # Remove stop words and lemmatize
-        cleaned_tokens = [
-            self.lemmatizer.lemmatize(token) 
-            for token in tokens 
-            if token.isalnum() and token not in self.stop_words
-        ]
-        
-        return " ".join(cleaned_tokens)
+        try:
+            # Tokenize
+            tokens = word_tokenize(text.lower())
+            
+            # Remove stop words and lemmatize
+            cleaned_tokens = [
+                self.lemmatizer.lemmatize(token) 
+                for token in tokens 
+                if token.isalnum() and token not in self.stop_words
+            ]
+            
+            return " ".join(cleaned_tokens)
+        except Exception as e:
+            logger.error(f"Error in preprocess_text: {str(e)}")
+            return text.lower()  # Fallback to simple lowercase
     
     def get_embedding(self, text: str) -> np.ndarray:
         """
@@ -258,6 +324,11 @@ class InterestModeler:
         Returns:
             Embedding vector
         """
+        # If sentence transformers is not available, return random embedding
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            # Use a standard size for embeddings
+            return np.random.randn(768)  # Standard BERT embedding size
+            
         try:
             preprocessed = self.preprocess_text(text)
             if not preprocessed:
@@ -268,7 +339,13 @@ class InterestModeler:
         except Exception as e:
             logger.error(f"Error getting embedding: {str(e)}")
             # Return a random embedding as fallback
-            return np.random.randn(self.model.get_sentence_embedding_dimension())
+            dim = 768  # Default embedding size if model is not accessible
+            if hasattr(self, 'model') and hasattr(self.model, 'get_sentence_embedding_dimension'):
+                try:
+                    dim = self.model.get_sentence_embedding_dimension()
+                except:
+                    pass
+            return np.random.randn(dim)
     
     def add_document(self, document_id: str, text: str, metadata: Dict[str, Any] = None):
         """
@@ -619,6 +696,12 @@ class InterestModeler:
             Dictionary mapping (domain1_id, domain2_id) to distance
         """
         try:
+            # Check if we have the necessary dependencies
+            if not SENTENCE_TRANSFORMERS_AVAILABLE:
+                logger.warning("Cannot compute semantic distances: sentence-transformers not available")
+                # Generate random distances as a fallback
+                return self._generate_random_distances(domains)
+            
             distances = {}
             
             # Get embeddings for each domain
@@ -649,13 +732,36 @@ class InterestModeler:
                         distance = 0.5  # Default distance for zero norm
                         
                     distances[(domain1_id, domain2_id)] = distance
-                    
-                    # Also compute interest-weighted distance based on user profile
-                    # (This could be used for personalized visualization)
-                    # Right now, this is just storing the raw semantic distance
             
             return distances
             
         except Exception as e:
             logger.error(f"Error computing domain distances: {str(e)}")
+            return self._generate_random_distances(domains)
+    
+    def _generate_random_distances(self, domains: List[Dict[str, Any]]) -> Dict[Tuple[str, str], float]:
+        """
+        Generate random distances as a fallback when semantic processing fails.
+        
+        Args:
+            domains: List of domains
+            
+        Returns:
+            Dictionary mapping (domain1_id, domain2_id) to random distance
+        """
+        try:
+            distances = {}
+            domain_ids = [domain['id'] for domain in domains]
+            
+            for i, domain1_id in enumerate(domain_ids):
+                for domain2_id in domain_ids[i+1:]:
+                    # Generate a random distance between 0.3 and 0.7
+                    # This avoids extremes (identical or completely unrelated)
+                    distance = 0.3 + (np.random.random() * 0.4)
+                    distances[(domain1_id, domain2_id)] = distance
+                    
+            return distances
+            
+        except Exception as e:
+            logger.error(f"Error generating random distances: {str(e)}")
             return {}

@@ -56,18 +56,26 @@ def get_domains():
         
         # Compute semantic distances if needed
         if domains and len(domains) > 1:
-            interest_modeler = get_interest_modeler()
-            distances = interest_modeler.compute_domain_distances(domains)
-            
-            # Format distances for output
-            formatted_distances = {
-                f"{k[0]}|{k[1]}": v for k, v in distances.items()
-            }
-            
-            return jsonify({
-                "domains": domains,
-                "semanticDistances": formatted_distances
-            })
+            try:
+                interest_modeler = get_interest_modeler()
+                distances = interest_modeler.compute_domain_distances(domains)
+                
+                # Format distances for output
+                formatted_distances = {
+                    f"{k[0]}|{k[1]}": v for k, v in distances.items()
+                }
+                
+                return jsonify({
+                    "domains": domains,
+                    "semanticDistances": formatted_distances
+                })
+            except Exception as semantic_error:
+                current_app.logger.error(f"Error computing semantic distances: {str(semantic_error)}")
+                # Continue with empty distances in case of error
+                return jsonify({
+                    "domains": domains,
+                    "semanticDistances": {}
+                })
         
         return jsonify({"domains": domains, "semanticDistances": {}})
         
