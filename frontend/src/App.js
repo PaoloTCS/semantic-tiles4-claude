@@ -29,6 +29,9 @@ function App() {
   // Current domain details
   const [currentDomain, setCurrentDomain] = useState(null);
   
+  // Selected domain for view (not navigation)
+  const [selectedDomain, setSelectedDomain] = useState(null);
+  
   // Breadcrumb path
   const [breadcrumbPath, setBreadcrumbPath] = useState([]);
   
@@ -256,6 +259,18 @@ function App() {
       { domainId: domain.id }
     );
     setCurrentParentId(domain.id);
+    // Clear selected domain when navigating
+    setSelectedDomain(null);
+  };
+  
+  // Handle domain view (without navigation)
+  const handleViewDomain = (domain) => {
+    trackActivity(
+      'domain_view', 
+      `Viewed domain: ${domain.name}`,
+      { domainId: domain.id }
+    );
+    setSelectedDomain(domain);
   };
   
   // Handle document click
@@ -340,11 +355,11 @@ function App() {
               />
             </ErrorBoundary>
             
-            {/* Document upload form (only visible when inside a domain) */}
-            {currentDomain && (
+            {/* Document upload form (visible when inside a domain or when a domain is selected) */}
+            {(currentDomain || selectedDomain) && (
               <ErrorBoundary fallback={<div>Error in document upload component</div>}>
                 <DocumentUpload 
-                  domainId={currentDomain.id} 
+                  domainId={selectedDomain ? selectedDomain.id : currentDomain.id} 
                   onUploadComplete={handleDocumentUpload}
                 />
               </ErrorBoundary>
@@ -381,6 +396,7 @@ function App() {
                     width={diagramWidth}
                     height={diagramHeight}
                     onDomainClick={handleDomainClick}
+                    onViewDomain={handleViewDomain}
                     onDocumentClick={handleDocumentClick}
                     onDeleteDomain={handleDeleteDomain}
                   />
