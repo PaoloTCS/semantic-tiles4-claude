@@ -102,6 +102,34 @@
   cursor: pointer;
 }
 
+.domain-navigation {
+  margin: 0.75rem 0;
+}
+
+.domain-navigation .navigate-button {
+  background-color: #0369a1;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.domain-navigation .navigate-button:hover {
+  background-color: #0284c7;
+}
+
+.domain-navigation .navigate-button::after {
+  content: ' →';
+  margin-left: 0.25rem;
+}
+
 .domain-documents h4 {
   margin-top: 1rem;
   margin-bottom: 0.5rem;
