@@ -116,14 +116,20 @@ def add_domain():
         
         if domain:
             # Add the domain to interest modeler for tracking
-            interest_modeler = get_interest_modeler()
-            text = f"{name}: {description}"
+            # But wrap this in a try/except to make it optional
             try:
-                interest_modeler.add_domain_activity(domain['id'], text)
-            except Exception as e:
-                current_app.logger.warning(f"Error tracking domain activity: {str(e)}")
-                # Continue even if tracking fails
+                interest_modeler = get_interest_modeler()
+                text = f"{name}: {description}"
+                try:
+                    interest_modeler.add_domain_activity(domain['id'], text)
+                except Exception as tracking_error:
+                    current_app.logger.warning(f"Error tracking domain activity: {str(tracking_error)}")
+                    # Continue even if tracking fails
+            except Exception as modeler_error:
+                current_app.logger.warning(f"Error initializing interest modeler: {str(modeler_error)}")
+                # Continue even if interest modeling fails completely
                 
+            # Return success response
             return jsonify(domain)
         else:
             return jsonify({"error": "Failed to add domain"}), 500
@@ -421,14 +427,20 @@ def extract_interests():
         if not text:
             return jsonify({"error": "Text is required"}), 400
             
-        interest_modeler = get_interest_modeler()
-        interests = interest_modeler.extract_interests(text)
-        
-        return jsonify({"interests": interests})
+        try:
+            interest_modeler = get_interest_modeler()
+            interests = interest_modeler.extract_interests(text)
+            
+            return jsonify({"interests": interests})
+        except Exception as interest_error:
+            current_app.logger.error(f"Interest extraction failed: {str(interest_error)}")
+            # Return empty interests array as fallback
+            return jsonify({"interests": [], "error": "Interest extraction failed but continuing"})
             
     except Exception as e:
         current_app.logger.error(f"Error extracting interests: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        # Return an empty result instead of an error
+        return jsonify({"interests": [], "error": "Interest extraction failed"})
 
 @api_bp.route('/documents/similar', methods=['POST'])
 def find_similar_documents():
