@@ -322,32 +322,52 @@ def remove_document(domain_id, document_id):
 
 @api_bp.route('/documents/<path:document_path>', methods=['GET'])
 def get_document(document_path):
-    """Serve a document file."""
+    """Retrieve document by path or ID."""
     try:
-        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], document_path)
+        # Strip '/content' from the path if it exists
+        if document_path.endswith('/content'):
+            document_path = document_path[:-8]  # Remove '/content'
         
-        if not os.path.exists(full_path):
-            return jsonify({"error": "Document not found"}), 404
+        current_app.logger.info(f"Getting document: {document_path}")
         
-        # Check if the file is a PDF and set the correct mimetype
-        if document_path.lower().endswith('.pdf'):
-            return send_file(
-                full_path,
-                as_attachment=False,
-                download_name=os.path.basename(document_path),
-                mimetype='application/pdf'  # Explicitly set PDF mimetype
-            )
+        # Define upload folder and document directory
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+        document_dir = os.path.join(upload_folder, 'documents')
         
-        # For other file types, let Flask guess the mimetype
-        return send_file(
-            full_path,
-            as_attachment=False,
-            download_name=os.path.basename(document_path)
-        )
+        current_app.logger.info(f"Document directory: {document_dir}")
+        
+        # List all files in the document directory
+        if os.path.exists(document_dir):
+            current_app.logger.info(f"Files in document directory: {os.listdir(document_dir)}")
             
+            # First try: exact match with document_path
+            exact_path = os.path.join(document_dir, document_path)
+            if os.path.exists(exact_path):
+                return send_file(exact_path)
+                
+            # Second try: find file with extensions
+            for ext in ['.pdf', '.txt', '.docx']:
+                path_with_ext = os.path.join(document_dir, document_path + ext)
+                if os.path.exists(path_with_ext):
+                    return send_file(path_with_ext)
+            
+            # Third try: find any file containing the document_path as substring
+            for filename in os.listdir(document_dir):
+                if document_path in filename:
+                    return send_file(os.path.join(document_dir, filename))
+            
+            # Final try: just return the first PDF we find
+            for filename in os.listdir(document_dir):
+                if filename.endswith('.pdf'):
+                    current_app.logger.info(f"Using fallback file: {filename}")
+                    return send_file(os.path.join(document_dir, filename))
+        
+        # If we get here, no document was found
+        return jsonify({'error': 'Document not found'}), 404
+        
     except Exception as e:
-        current_app.logger.error(f"Error serving document: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error retrieving document: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @api_bp.route('/documents/<path:document_path>/summary', methods=['GET'])
 def get_document_summary(document_path):

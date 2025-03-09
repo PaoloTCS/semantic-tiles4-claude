@@ -22,7 +22,10 @@ A visual knowledge management system that organizes information using semantic r
   - NLTK for text processing
   - OpenAI API for summaries and document queries
 
-## Getting Started
+## Getting Started 
+
+To recreate from Repo, and save the old local project: 
+1. move OLD project to another folder
 
 ### Prerequisites
 
@@ -33,3 +36,26 @@ A visual knowledge management system that organizes information using semantic r
 ### Installation
 
 1. Clone the repository
+
+
+⏺ Here's how to recreate the full structure:
+
+  1. Create Python virtual environment:
+  python -m venv venv
+  source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+  2. Install backend dependencies:
+  pip install -r requirements.txt
+
+  3. Install frontend dependencies:
+  cd frontend
+  npm install
+
+  4. Download required ML models:
+  python backend/download_models.py
+
+  5. Setup backend structure:
+  mkdir -p backend/uploads/models
+  mkdir -p backend/uploads/documents
+
+ This succedssfully recreates the repo. 

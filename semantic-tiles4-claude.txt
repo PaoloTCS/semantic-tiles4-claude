@@ -1,3 +1,2500 @@
+Directory structure:
+└── paolotcs-semantic-tiles4-claude/
+    ├── README.md
+    ├── CLAUDE.md
+    ├── package.json
+    ├── requirements.txt
+    ├── tiles4-claude.sh
+    ├── backend/
+    │   ├── download_models.py
+    │   ├── reset.py
+    │   ├── run.py
+    │   └── app/
+    │       ├── __init__.py
+    │       ├── api/
+    │       │   ├── __init__.py
+    │       │   └── routes.py
+    │       └── core/
+    │           ├── __init__.py
+    │           ├── domain_model.py
+    │           ├── interest_modeler.py
+    │           └── semantic_processor.py
+    └── frontend/
+        ├── package-lock.json
+        ├── package.json
+        ├── public/
+        │   ├── index.html
+        │   └── manifest.json
+        └── src/
+            ├── App.js
+            ├── index.js
+            ├── components/
+            │   ├── BreadcrumbNav.js
+            │   ├── DocumentPanel.js
+            │   ├── DocumentUpload.js
+            │   ├── DomainForm.js
+            │   ├── ErrorBoundary.js
+            │   ├── InterestVisualizer.js
+            │   └── VoronoiDiagram.js
+            ├── services/
+            │   └── apiService.js
+            └── styles/
+                ├── App.css
+                ├── InterestVisualizer.css
+                └── index.css
+
+================================================
+File: README.md
+================================================
+# Semantic Tiles 4: Knowledge Map with Interest Tracking
+
+A visual knowledge management system that organizes information using semantic relationships, Voronoi diagrams, and AI-powered interest modeling.
+
+## Features
+
+- Create hierarchical knowledge domains with semantic relationships
+- Upload and manage documents within domains
+- Visualize knowledge domains using Voronoi diagrams based on semantic similarity
+- AI-powered interest tracking and modeling of user behavior
+- Dynamic adaptation of visualizations based on user interests
+- Query documents using semantic search
+- Get document summaries with AI
+
+## Technology Stack
+
+- **Frontend**: React.js with D3.js for visualizations
+- **Backend**: Flask REST API
+- **ML/AI**: 
+  - Sentence Transformers for semantic embeddings
+  - FAISS for efficient vector similarity search
+  - NLTK for text processing
+  - OpenAI API for summaries and document queries
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 16+
+- OpenAI API key (optional, for document summaries and queries)
+
+### Installation
+
+1. Clone the repository
+
+
+================================================
+File: CLAUDE.md
+================================================
+# Semantic Tiles Project Guidelines
+
+## Build and Run Commands
+- **Backend**: `python backend/run.py`
+- **Backend Reset**: `python backend/reset.py` 
+- **Frontend Dev**: `cd frontend && npm start`
+- **Frontend Build**: `cd frontend && npm run build`
+- **Frontend Test**: `cd frontend && npm test`
+
+## Code Style Guidelines
+
+### Python (Backend)
+- **Naming**: Classes use PascalCase, functions/variables use snake_case, constants use UPPER_CASE
+- **Imports**: Group in order: standard library, third-party packages, local modules
+- **Type Hints**: Use type annotations for function parameters and return values
+- **Error Handling**: Use specific exception handling with try/except blocks and proper logging
+- **Documentation**: Use docstrings for classes and functions
+
+### JavaScript/React (Frontend)
+- **Naming**: Components use PascalCase, functions/variables use camelCase
+- **Components**: Use functional components with hooks
+- **Event Handlers**: Prefix with "handle" or "on" (e.g., handleUpload, onSubmit)
+- **Imports**: Order by: React/hooks, components, services, styles
+- **Error Handling**: Use error boundaries for component-level error handling
+
+The codebase follows a clean, modular architecture with separation of concerns between backend API, semantic processing, and frontend visualization components.
+
+
+================================================
+File: package.json
+================================================
+{
+  "dependencies": {
+    "d3-delaunay": "^6.0.4"
+  }
+}
+
+
+
+================================================
+File: requirements.txt
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/requirements.txt
+Flask==2.3.3
+Flask-Cors==4.0.0
+python-dotenv==1.0.0
+PyPDF2==3.0.1
+Werkzeug==2.3.7
+sentence-transformers==2.2.2
+transformers==4.35.0
+torch==2.1.0
+faiss-cpu==1.7.4
+nltk==3.8.1
+numpy==1.25.2
+scikit-learn==1.3.0
+gunicorn==21.2.0
+uuid==1.30
+
+
+================================================
+File: tiles4-claude.sh
+================================================
+#!/bin/bash
+# Create directory structure for semantic-tiles4-claude
+
+BASE_DIR=~/VerbumTechnologies/semantic-tiles4-claude
+echo "Creating directory structure in $BASE_DIR..."
+
+# Create main directories
+mkdir -p $BASE_DIR/backend/app/api
+mkdir -p $BASE_DIR/backend/app/core
+mkdir -p $BASE_DIR/backend/uploads/{documents,data,cache}
+mkdir -p $BASE_DIR/frontend/src/{components,services,styles}
+mkdir -p $BASE_DIR/frontend/public
+
+# Create necessary files (empty for now)
+touch $BASE_DIR/backend/run.py
+touch $BASE_DIR/backend/reset.py
+touch $BASE_DIR/backend/app/__init__.py
+touch $BASE_DIR/backend/app/api/__init__.py
+touch $BASE_DIR/backend/app/api/routes.py
+touch $BASE_DIR/backend/app/core/__init__.py
+touch $BASE_DIR/backend/app/core/domain_model.py
+touch $BASE_DIR/backend/app/core/semantic_processor.py
+touch $BASE_DIR/backend/app/core/interest_modeler.py
+
+touch $BASE_DIR/frontend/src/App.js
+touch $BASE_DIR/frontend/src/index.js
+touch $BASE_DIR/frontend/src/components/VoronoiDiagram.js
+touch $BASE_DIR/frontend/src/components/BreadcrumbNav.js
+touch $BASE_DIR/frontend/src/components/DocumentPanel.js
+touch $BASE_DIR/frontend/src/components/DocumentUpload.js
+touch $BASE_DIR/frontend/src/components/DomainForm.js
+touch $BASE_DIR/frontend/src/components/ErrorBoundary.js
+touch $BASE_DIR/frontend/src/components/InterestVisualizer.js
+touch $BASE_DIR/frontend/src/services/apiService.js
+touch $BASE_DIR/frontend/src/styles/App.css
+touch $BASE_DIR/frontend/src/styles/InterestVisualizer.css
+
+touch $BASE_DIR/requirements.txt
+touch $BASE_DIR/README.md
+
+echo "Directory structure created successfully!"
+
+
+================================================
+File: backend/download_models.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/download_models.py
+#!/usr/bin/env python
+"""
+download_models.py
+Utility script to download required models for offline use.
+"""
+
+import os
+import logging
+from transformers import AutoTokenizer, AutoModel, pipeline
+from sentence_transformers import SentenceTransformer
+import torch
+import nltk
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def download_models():
+    """Download and cache all required models."""
+    try:
+        # Create models directory
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        models_dir = os.path.join(base_dir, 'uploads', 'models')
+        os.makedirs(models_dir, exist_ok=True)
+        
+        # Device configuration
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"Using device: {device}")
+        
+        # Download NLTK resources
+        logger.info("Downloading NLTK resources...")
+        nltk.download('punkt')
+        nltk.download('stopwords')
+        nltk.download('wordnet')
+        
+        # Download sentence transformer model
+        logger.info("Downloading Sentence Transformer model...")
+        st_model_path = os.path.join(models_dir, 'all-MiniLM-L6-v2')
+        if not os.path.exists(st_model_path):
+            model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+            model.save(st_model_path)
+        
+        # Download Hugging Face models
+        logger.info("Downloading embedding model...")
+        hf_model_path = os.path.join(models_dir, 'sentence-transformers-all-MiniLM-L6-v2')
+        if not os.path.exists(hf_model_path):
+            tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+            model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+            tokenizer.save_pretrained(hf_model_path)
+            model.save_pretrained(hf_model_path)
+        
+        logger.info("Downloading summarization model...")
+        summarization_model_path = os.path.join(models_dir, 'facebook-bart-large-cnn')
+        if not os.path.exists(summarization_model_path):
+            summarizer = pipeline("summarization", model="facebook/bart-large-cnn", device=0 if device == "cuda" else -1)
+            summarizer.save_pretrained(summarization_model_path)
+        
+        logger.info("Downloading QA model...")
+        qa_model_path = os.path.join(models_dir, 'deepset-roberta-base-squad2')
+        if not os.path.exists(qa_model_path):
+            qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2", device=0 if device == "cuda" else -1)
+            qa_model.save_pretrained(qa_model_path)
+        
+        logger.info("All models downloaded successfully!")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error downloading models: {str(e)}")
+        return False
+
+if __name__ == "__main__":
+    logger.info("Starting model download...")
+    success = download_models()
+    
+    if success:
+        logger.info("Model download complete. The application is ready to run offline.")
+    else:
+        logger.error("Model download failed. See logs for details.")
+
+
+================================================
+File: backend/reset.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/reset.py
+#!/usr/bin/env python
+"""
+reset.py
+Utility script to reset the Semantic Tiles application data.
+"""
+
+import os
+import json
+import shutil
+import logging
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def reset_application_data():
+    """Reset all application data by clearing uploads folder and resetting domains."""
+    try:
+        # Get the backend directory (the directory this script is in)
+        backend_dir = Path(__file__).parent.absolute()
+        uploads_dir = backend_dir / 'uploads'
+        
+        # Check if uploads directory exists
+        if not uploads_dir.exists():
+            logger.warning(f"Uploads directory not found at {uploads_dir}")
+            logger.info("Creating uploads directory structure")
+            os.makedirs(uploads_dir, exist_ok=True)
+        
+        # Clear documents directory
+        documents_dir = uploads_dir / 'documents'
+        if documents_dir.exists():
+            logger.info(f"Removing all documents from {documents_dir}")
+            shutil.rmtree(documents_dir)
+        
+        # Create documents directory
+        os.makedirs(documents_dir, exist_ok=True)
+        
+        # Create/reset data directory
+        data_dir = uploads_dir / 'data'
+        os.makedirs(data_dir, exist_ok=True)
+        
+        # Create empty domains.json
+        domains_file = data_dir / 'domains.json'
+        empty_domains = {
+            "domains": {},
+            "rootDomains": []
+        }
+        
+        logger.info(f"Creating empty domains.json at {domains_file}")
+        with open(domains_file, 'w') as f:
+            json.dump(empty_domains, f, indent=2)
+        
+        # Clear cache directory
+        cache_dir = uploads_dir / 'cache'
+        if cache_dir.exists():
+            logger.info(f"Removing all cached files from {cache_dir}")
+            shutil.rmtree(cache_dir)
+        
+        # Create cache directory
+        os.makedirs(cache_dir, exist_ok=True)
+        
+        logger.info("Application data has been reset successfully")
+        return True
+    
+    except Exception as e:
+        logger.error(f"Error resetting application data: {str(e)}")
+        return False
+
+if __name__ == "__main__":
+    logger.info("Starting application data reset...")
+    success = reset_application_data()
+    
+    if success:
+        logger.info("Reset complete. The application now has fresh empty data.")
+    else:
+        logger.error("Reset failed. See logs for details.")
+
+
+================================================
+File: backend/run.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/run.py
+"""
+run.py
+Entry point for the Semantic Tiles application.
+"""
+
+import os
+import sys
+import logging
+from app import create_app
+
+# Configure basic logging with timestamp
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+def get_port():
+    """Get and validate port number from environment."""
+    try:
+        port = int(os.getenv('PORT', 5001))
+        if not (1024 <= port <= 65535):
+            logger.warning(f"Port {port} out of range, using default 5001")
+            return 5001
+        return port
+    except ValueError:
+        logger.error("Invalid PORT environment variable")
+        return 5001
+
+def get_environment():
+    """Get and validate environment configuration."""
+    env = os.getenv('FLASK_ENV', 'development')
+    valid_environments = ['development', 'testing', 'production']
+    if env not in valid_environments:
+        logger.warning(f"Invalid environment '{env}' specified, defaulting to development")
+        return 'development'
+    return env
+
+def check_prerequisites():
+    """Check if all prerequisites are met to run the application."""
+    if not os.getenv('OPENAI_API_KEY'):
+        logger.warning("OPENAI_API_KEY not found in environment variables. "
+                      "Some semantic features will not work.")
+
+if __name__ == '__main__':
+    try:
+        check_prerequisites()
+        env = get_environment()
+        port = get_port()
+        
+        # Create and configure the application instance
+        app = create_app(env)
+        app.run(host='0.0.0.0', port=port, debug=(env == 'development'))
+        
+    except Exception as e:
+        logger.error(f"Failed to start application: {str(e)}")
+        sys.exit(1)
+
+
+================================================
+File: backend/app/__init__.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/__init__.py
+"""
+app/__init__.py
+Application factory for Semantic Tiles.
+"""
+
+import os
+from flask import Flask
+from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def create_app(env):
+    """Create and configure the Flask application."""
+    app = Flask(__name__, 
+                template_folder='templates',
+                static_folder='static')
+    # Allow requests from local development and the Netlify deployment
+    CORS(app, resources={r"/*": {"origins": [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000",
+        "https://semantic-tiles4.netlify.app"
+    ]}})
+    
+    # Configuration
+    app.config.update(
+        SECRET_KEY=os.getenv('SECRET_KEY', 'dev-key-change-in-production'),
+        UPLOAD_FOLDER=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads'),
+        MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
+        TEMPLATES_AUTO_RELOAD=True if env == 'development' else False
+    )
+    
+    # Import and register blueprints
+    from app.api.routes import api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+    
+    # Default route
+    @app.route('/')
+    def index():
+        return app.send_static_file('index.html')
+    
+    # Ensure upload directory exists
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'documents'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'data'), exist_ok=True)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'cache'), exist_ok=True)
+    
+    return app
+
+
+================================================
+File: backend/app/api/__init__.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/api/__init__.py
+"""
+API module initialization
+"""
+
+
+================================================
+File: backend/app/api/routes.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/api/routes.py
+"""
+app/api/routes.py
+API routes for the Semantic Tiles application.
+"""
+
+import os
+import uuid
+from datetime import datetime
+from flask import Blueprint, jsonify, request, current_app, send_file
+from werkzeug.utils import secure_filename
+from app.core.domain_model import DomainStore
+from app.core.semantic_processor import SemanticProcessor
+from app.core.interest_modeler import InterestModeler
+
+# Create blueprint
+api_bp = Blueprint('api', __name__)
+
+# Setup global services
+domain_store = None
+semantic_processor = None
+interest_modeler = None
+
+def get_domain_store():
+    """Get or initialize domain store."""
+    global domain_store
+    if domain_store is None:
+        storage_dir = os.path.join(current_app.config['UPLOAD_FOLDER'], 'data')
+        os.makedirs(storage_dir, exist_ok=True)
+        domain_store = DomainStore(storage_dir)
+    return domain_store
+
+def get_semantic_processor():
+    """Get or initialize semantic processor."""
+    global semantic_processor
+    if semantic_processor is None:
+        semantic_processor = SemanticProcessor(current_app.config['UPLOAD_FOLDER'])
+    return semantic_processor
+
+def get_interest_modeler():
+    """Get or initialize interest modeler."""
+    global interest_modeler
+    if interest_modeler is None:
+        interest_modeler = InterestModeler(current_app.config['UPLOAD_FOLDER'])
+    return interest_modeler
+
+@api_bp.route('/domains', methods=['GET'])
+def get_domains():
+    """Get domains at a specific level."""
+    try:
+        parent_id = request.args.get('parentId')
+        
+        # Get domains
+        domain_store = get_domain_store()
+        domains = domain_store.get_domains(parent_id)
+        
+        # Compute semantic distances if needed
+        if domains and len(domains) > 1:
+            interest_modeler = get_interest_modeler()
+            distances = interest_modeler.compute_domain_distances(domains)
+            
+            # Format distances for output
+            formatted_distances = {
+                f"{k[0]}|{k[1]}": v for k, v in distances.items()
+            }
+            
+            return jsonify({
+                "domains": domains,
+                "semanticDistances": formatted_distances
+            })
+        
+        return jsonify({"domains": domains, "semanticDistances": {}})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error getting domains: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/<domain_id>', methods=['GET'])
+def get_domain(domain_id):
+    """Get a single domain by ID."""
+    try:
+        domain_store = get_domain_store()
+        domain = domain_store.get_domain(domain_id)
+        
+        if domain:
+            return jsonify(domain)
+        else:
+            return jsonify({"error": "Domain not found"}), 404
+            
+    except Exception as e:
+        current_app.logger.error(f"Error getting domain: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains', methods=['POST'])
+def add_domain():
+    """Add a new domain."""
+    try:
+        data = request.json
+        name = data.get('name')
+        parent_id = data.get('parentId')
+        description = data.get('description', '')
+        
+        if not name:
+            return jsonify({"error": "Name is required"}), 400
+        
+        domain_store = get_domain_store()
+        domain = domain_store.add_domain(name, parent_id, description)
+        
+        if domain:
+            # Add the domain to interest modeler for tracking
+            interest_modeler = get_interest_modeler()
+            text = f"{name}: {description}"
+            try:
+                interest_modeler.add_domain_activity(domain['id'], text)
+            except Exception as e:
+                current_app.logger.warning(f"Error tracking domain activity: {str(e)}")
+                # Continue even if tracking fails
+                
+            return jsonify(domain)
+        else:
+            return jsonify({"error": "Failed to add domain"}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error adding domain: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/<domain_id>', methods=['PUT'])
+def update_domain(domain_id):
+    """Update a domain."""
+    try:
+        data = request.json
+        updates = {}
+        
+        # Only allow specific fields to be updated
+        allowed_fields = ['name', 'description', 'x', 'y']
+        for field in allowed_fields:
+            if field in data:
+                updates[field] = data[field]
+        
+        domain_store = get_domain_store()
+        domain = domain_store.update_domain(domain_id, updates)
+        
+        if domain:
+            return jsonify(domain)
+        else:
+            return jsonify({"error": "Domain not found"}), 404
+            
+    except Exception as e:
+        current_app.logger.error(f"Error updating domain: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/<domain_id>', methods=['DELETE'])
+def delete_domain(domain_id):
+    """Delete a domain and its children."""
+    try:
+        domain_store = get_domain_store()
+        success = domain_store.delete_domain(domain_id)
+        
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Domain not found"}), 404
+            
+    except Exception as e:
+        current_app.logger.error(f"Error deleting domain: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/<domain_id>/path', methods=['GET'])
+def get_domain_path(domain_id):
+    """Get the path from root to a domain."""
+    try:
+        domain_store = get_domain_store()
+        path = domain_store.get_domain_path(domain_id)
+        
+        return jsonify({"path": path})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error getting domain path: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/<domain_id>/documents', methods=['POST'])
+def add_document(domain_id):
+    """Upload and add a document to a domain."""
+    try:
+        description = request.form.get('description', '')
+        
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+            
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+            
+        if not domain_id:
+            return jsonify({"error": "Domain ID is required"}), 400
+            
+        # Check if domain exists
+        domain_store = get_domain_store()
+        domain = domain_store.get_domain(domain_id)
+        if not domain:
+            return jsonify({"error": f"Domain with ID {domain_id} not found"}), 404
+            
+        # Save the file
+        filename = secure_filename(file.filename)
+        file_ext = os.path.splitext(filename)[1].lower()
+        
+        # Validate file type (optional)
+        allowed_extensions = ['.pdf', '.doc', '.docx', '.txt']
+        if file_ext.lower() not in allowed_extensions:
+            return jsonify({"error": f"File type {file_ext} not supported. Please upload a PDF, DOC, DOCX, or TXT file."}), 400
+        
+        # Create a unique filename
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'documents', unique_filename)
+        
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        # Save the file
+        file.save(file_path)
+        
+        saved_file_exists = os.path.exists(file_path)
+        if not saved_file_exists:
+            return jsonify({"error": "Failed to save file"}), 500
+            
+        # Add document to domain
+        document = {
+            "id": str(uuid.uuid4()),
+            "name": filename,
+            "path": os.path.join('documents', unique_filename),
+            "type": file.content_type,
+            "dateAdded": datetime.now().isoformat(),
+            "description": description
+        }
+        
+        result = domain_store.add_document(domain_id, document)
+        
+        if result:
+            # Extract text and index the document for interest modeling
+            try:
+                semantic_processor = get_semantic_processor()
+                text = semantic_processor._extract_text_from_pdf(file_path)
+                if text:
+                    interest_modeler = get_interest_modeler()
+                    interest_modeler.add_document(
+                        document["id"], 
+                        text, 
+                        {
+                            "name": document["name"],
+                            "path": document["path"],
+                            "domainId": domain_id
+                        }
+                    )
+            except Exception as e:
+                current_app.logger.warning(f"Error indexing document for interest modeling: {str(e)}")
+                # Continue even if indexing fails
+            
+            return jsonify(result)
+        else:
+            # Clean up file if document not added
+            if saved_file_exists:
+                os.remove(file_path)
+            return jsonify({"error": "Failed to add document to domain"}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error adding document: {str(e)}")
+        # Clean up file if exception occurs
+        try:
+            if 'file_path' in locals() and os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as cleanup_error:
+            current_app.logger.error(f"Error cleaning up file after exception: {str(cleanup_error)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/<domain_id>/documents/<document_id>', methods=['DELETE'])
+def remove_document(domain_id, document_id):
+    """Remove a document from a domain."""
+    try:
+        domain_store = get_domain_store()
+        
+        # Get the document info first so we can delete the file
+        domain = domain_store.get_domain(domain_id)
+        document = None
+        
+        if domain and "documents" in domain:
+            for doc in domain["documents"]:
+                if doc.get("id") == document_id:
+                    document = doc
+                    break
+        
+        success = domain_store.remove_document(domain_id, document_id)
+        
+        if success and document:
+            # Delete the file if it exists
+            if "path" in document:
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], document["path"])
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Document not found"}), 404
+            
+    except Exception as e:
+        current_app.logger.error(f"Error removing document: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/documents/<path:document_path>', methods=['GET'])
+def get_document(document_path):
+    """Serve a document file."""
+    try:
+        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], document_path)
+        
+        if not os.path.exists(full_path):
+            return jsonify({"error": "Document not found"}), 404
+        
+        # Check if the file is a PDF and set the correct mimetype
+        if document_path.lower().endswith('.pdf'):
+            return send_file(
+                full_path,
+                as_attachment=False,
+                download_name=os.path.basename(document_path),
+                mimetype='application/pdf'  # Explicitly set PDF mimetype
+            )
+        
+        # For other file types, let Flask guess the mimetype
+        return send_file(
+            full_path,
+            as_attachment=False,
+            download_name=os.path.basename(document_path)
+        )
+            
+    except Exception as e:
+        current_app.logger.error(f"Error serving document: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/documents/<path:document_path>/summary', methods=['GET'])
+def get_document_summary(document_path):
+    """Get a summary of a document."""
+    try:
+        semantic_processor = get_semantic_processor()
+        summary = semantic_processor.get_document_summary(document_path)
+        
+        return jsonify({"summary": summary})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error getting document summary: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/documents/<path:document_path>/query', methods=['POST'])
+def query_document(document_path):
+    """Process a query about a document."""
+    try:
+        data = request.json
+        query = data.get('query')
+        
+        if not query:
+            return jsonify({"error": "Query is required"}), 400
+        
+        # Validate document path
+        full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], document_path)
+        if not os.path.exists(full_path):
+            return jsonify({"error": "Document not found"}), 404
+            
+        # Validate query length
+        if len(query) > 1000:  # Set a reasonable limit
+            return jsonify({"error": "Query too long (maximum 1000 characters)"}), 400
+            
+        semantic_processor = get_semantic_processor()
+        response = semantic_processor.process_document_query(document_path, query)
+        
+        # Track the query for interest modeling
+        try:
+            interest_modeler = get_interest_modeler()
+            interest_modeler.add_query_activity(document_path, query)
+        except Exception as e:
+            current_app.logger.warning(f"Error tracking query activity: {str(e)}")
+            # Continue even if tracking fails
+        
+        return jsonify({"response": response})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error querying document: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/domains/positions', methods=['POST'])
+def update_domain_positions():
+    """Update domain positions."""
+    try:
+        data = request.json
+        positions = data.get('positions', {})
+        
+        domain_store = get_domain_store()
+        success = domain_store.update_domain_positions(positions)
+        
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Failed to update positions"}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error updating domain positions: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/interests/extract', methods=['POST'])
+def extract_interests():
+    """Extract interests from text."""
+    try:
+        data = request.json
+        text = data.get('text')
+        
+        if not text:
+            return jsonify({"error": "Text is required"}), 400
+            
+        interest_modeler = get_interest_modeler()
+        interests = interest_modeler.extract_interests(text)
+        
+        return jsonify({"interests": interests})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error extracting interests: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/documents/similar', methods=['POST'])
+def find_similar_documents():
+    """Find documents similar to query text."""
+    try:
+        data = request.json
+        query = data.get('query')
+        top_k = data.get('top_k', 5)
+        
+        if not query:
+            return jsonify({"error": "Query is required"}), 400
+            
+        interest_modeler = get_interest_modeler()
+        similar_docs = interest_modeler.find_similar_documents(query, top_k)
+        
+        return jsonify({"similar_documents": similar_docs})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error finding similar documents: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@api_bp.route('/interests/user-profile', methods=['GET'])
+def get_user_profile():
+    """Get the current user interest profile."""
+    try:            
+        interest_modeler = get_interest_modeler()
+        profile = interest_modeler.get_user_profile()
+        
+        return jsonify({"profile": profile})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error getting user profile: {str(e)}")
+        # Return an empty profile instead of an error to make the app more resilient
+        return jsonify({"profile": {"top_interests": [], "activity_count": 0, "last_updated": 0}}), 200
+
+@api_bp.route('/interests/track-activity', methods=['POST'])
+def track_user_activity():
+    """Track user activity for interest modeling."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"success": False, "message": "No data provided"}), 200
+            
+        activity_type = data.get('type', 'unknown')
+        content = data.get('content', '')
+        metadata = data.get('metadata', {})
+        
+        # Validate and sanitize input
+        activity_type = str(activity_type)[:50]  # Limit type length
+        
+        # Ensure content is a string and limit its length
+        if not isinstance(content, str):
+            content = str(content)
+        content = content[:2000]  # Limit content length
+        
+        # Ensure metadata is a dict
+        if not isinstance(metadata, dict):
+            metadata = {}
+        
+        # Only proceed if we have meaningful content
+        if not activity_type or not content:
+            return jsonify({"success": False, "message": "Activity type and content are required but will not error"}), 200
+            
+        interest_modeler = get_interest_modeler()
+        try:
+            interest_modeler.track_user_activity(activity_type, content, metadata)
+        except Exception as tracking_error:
+            current_app.logger.error(f"Error in interest_modeler.track_user_activity: {str(tracking_error)}")
+            # Continue without erroring the request
+        
+        return jsonify({"success": True})
+            
+    except Exception as e:
+        current_app.logger.error(f"Error tracking user activity: {str(e)}")
+        # Return success anyway to not disrupt the frontend
+        return jsonify({"success": False, "message": "Activity logging failed but will not error"}), 200
+
+
+================================================
+File: backend/app/core/__init__.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/core/__init__.py
+"""
+Core module initialization
+"""
+
+
+================================================
+File: backend/app/core/domain_model.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/core/domain_model.py
+"""
+app/core/domain_model.py
+Models for knowledge domains and documents.
+"""
+
+import os
+import json
+import uuid
+import logging
+from typing import List, Dict, Optional, Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class DomainStore:
+    """
+    Stores and manages knowledge domains and documents.
+    Uses a JSON file-based storage system.
+    """
+    
+    def __init__(self, storage_dir: str):
+        """
+        Initialize the domain store.
+        
+        Args:
+            storage_dir: Directory for data storage
+        """
+        self.storage_dir = storage_dir
+        self.data_file = os.path.join(storage_dir, 'domains.json')
+        self.domains = self._load_data()
+    
+    def _load_data(self) -> Dict[str, Any]:
+        """
+        Load domain data from storage.
+        
+        Returns:
+            Domain data structure
+        """
+        try:
+            if os.path.exists(self.data_file):
+                with open(self.data_file, 'r') as f:
+                    return json.load(f)
+            else:
+                # Initialize with empty structure
+                return {
+                    "domains": {},
+                    "rootDomains": []
+                }
+        except Exception as e:
+            logger.error(f"Error loading domain data: {str(e)}")
+            return {
+                "domains": {},
+                "rootDomains": []
+            }
+    
+    def _save_data(self) -> bool:
+        """
+        Save domain data to storage.
+        
+        Returns:
+            Success status
+        """
+        try:
+            os.makedirs(self.storage_dir, exist_ok=True)
+            with open(self.data_file, 'w') as f:
+                json.dump(self.domains, f, indent=2)
+            return True
+        except Exception as e:
+            logger.error(f"Error saving domain data: {str(e)}")
+            return False
+    
+    def get_domains(self, parent_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Get domains at a specific level.
+        
+        Args:
+            parent_id: Parent domain ID or None for root level
+            
+        Returns:
+            List of domain objects
+        """
+        try:
+            domain_ids = []
+            if parent_id is None:
+                domain_ids = self.domains["rootDomains"]
+            elif parent_id in self.domains["domains"]:
+                domain_ids = self.domains["domains"][parent_id].get("children", [])
+                
+            return [
+                self.domains["domains"][domain_id]
+                for domain_id in domain_ids
+                if domain_id in self.domains["domains"]
+            ]
+        except Exception as e:
+            logger.error(f"Error getting domains: {str(e)}")
+            return []
+    
+    def get_domain(self, domain_id: str) -> Optional[Dict[str, Any]]:
+        """
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/core/domain_model.py
+# (continuing from previous content)
+        
+        Args:
+            domain_id: Domain ID
+            
+        Returns:
+            Domain object or None if not found
+        """
+        try:
+            if domain_id in self.domains["domains"]:
+                return self.domains["domains"][domain_id]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting domain: {str(e)}")
+            return None
+    
+    def add_domain(self, name: str, parent_id: Optional[str] = None, description: str = "") -> Optional[Dict[str, Any]]:
+        """
+        Add a new domain.
+        
+        Args:
+            name: Domain name
+            parent_id: Parent domain ID or None for root level
+            description: Optional description
+            
+        Returns:
+            New domain object or None on error
+        """
+        try:
+            # Validate name
+            if not name or not name.strip():
+                logger.error("Cannot add domain with empty name")
+                return None
+                
+            # Check for duplicate names at the same level
+            existing_domains = self.get_domains(parent_id)
+            if any(domain["name"].lower() == name.lower() for domain in existing_domains):
+                logger.error(f"Domain with name '{name}' already exists at this level")
+                return None
+                
+            # Check if parent exists if specified
+            if parent_id is not None and parent_id not in self.domains["domains"]:
+                logger.error(f"Parent domain with ID {parent_id} does not exist")
+                return None
+                
+            # Create new domain
+            domain_id = str(uuid.uuid4())
+            domain = {
+                "id": domain_id,
+                "name": name,
+                "description": description,
+                "parentId": parent_id,
+                "children": [],
+                "documents": [],
+                "x": 0,  # Initial position, will be set by frontend
+                "y": 0
+            }
+            
+            # Start a transaction-like operation
+            original_domains = self.domains.copy()
+            try:
+                # Add to domains dictionary
+                self.domains["domains"][domain_id] = domain
+                
+                # Add to parent's children or root domains
+                if parent_id is None:
+                    self.domains["rootDomains"].append(domain_id)
+                else:
+                    if "children" not in self.domains["domains"][parent_id]:
+                        self.domains["domains"][parent_id]["children"] = []
+                    self.domains["domains"][parent_id]["children"].append(domain_id)
+                
+                # Save changes
+                if not self._save_data():
+                    raise Exception("Failed to save domain data")
+                    
+                return domain
+                
+            except Exception as e:
+                # Transaction failed - restore original data
+                self.domains = original_domains
+                logger.error(f"Transaction failed in add_domain: {str(e)}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error adding domain: {str(e)}")
+            return None
+    
+    def update_domain(self, domain_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update a domain.
+        
+        Args:
+            domain_id: Domain ID
+            updates: Dictionary of updates
+            
+        Returns:
+            Updated domain object or None on error
+        """
+        try:
+            if domain_id not in self.domains["domains"]:
+                return None
+                
+            # Only update allowed fields
+            allowed_fields = ['name', 'description', 'x', 'y']
+            for field in allowed_fields:
+                if field in updates:
+                    self.domains["domains"][domain_id][field] = updates[field]
+            
+            self._save_data()
+            return self.domains["domains"][domain_id]
+        except Exception as e:
+            logger.error(f"Error updating domain: {str(e)}")
+            return None
+    
+    def delete_domain(self, domain_id: str) -> bool:
+        """
+        Delete a domain and its children.
+        
+        Args:
+            domain_id: Domain ID
+            
+        Returns:
+            Success status
+        """
+        try:
+            if domain_id not in self.domains["domains"]:
+                return False
+                
+            # Get domain info before deletion
+            domain = self.domains["domains"][domain_id]
+            parent_id = domain.get("parentId")
+            
+            # Recursively delete all children
+            children = domain.get("children", [])
+            for child_id in children:
+                self.delete_domain(child_id)
+            
+            # Remove from parent's children list
+            if parent_id is None:
+                if domain_id in self.domains["rootDomains"]:
+                    self.domains["rootDomains"].remove(domain_id)
+            elif parent_id in self.domains["domains"]:
+                if "children" in self.domains["domains"][parent_id]:
+                    if domain_id in self.domains["domains"][parent_id]["children"]:
+                        self.domains["domains"][parent_id]["children"].remove(domain_id)
+            
+            # Delete domain
+            del self.domains["domains"][domain_id]
+            
+            self._save_data()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting domain: {str(e)}")
+            return False
+    
+    def add_document(self, domain_id: str, document: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Add a document to a domain.
+        
+        Args:
+            domain_id: Domain ID
+            document: Document object with name, path, etc.
+            
+        Returns:
+            Updated document object or None on error
+        """
+        try:
+            if domain_id not in self.domains["domains"]:
+                return None
+                
+            document_id = document.get("id", str(uuid.uuid4()))
+            document_obj = {
+                "id": document_id,
+                "name": document.get("name", "Untitled Document"),
+                "path": document.get("path", ""),
+                "type": document.get("type", "application/pdf"),
+                "dateAdded": document.get("dateAdded", ""),
+                "description": document.get("description", "")
+            }
+            
+            if "documents" not in self.domains["domains"][domain_id]:
+                self.domains["domains"][domain_id]["documents"] = []
+                
+            self.domains["domains"][domain_id]["documents"].append(document_obj)
+            
+            self._save_data()
+            return document_obj
+        except Exception as e:
+            logger.error(f"Error adding document: {str(e)}")
+            return None
+    
+    def remove_document(self, domain_id: str, document_id: str) -> bool:
+        """
+        Remove a document from a domain.
+        
+        Args:
+            domain_id: Domain ID
+            document_id: Document ID
+            
+        Returns:
+            Success status
+        """
+        try:
+            if domain_id not in self.domains["domains"]:
+                return False
+                
+            if "documents" not in self.domains["domains"][domain_id]:
+                return False
+                
+            initial_count = len(self.domains["domains"][domain_id]["documents"])
+            self.domains["domains"][domain_id]["documents"] = [
+                doc for doc in self.domains["domains"][domain_id]["documents"]
+                if doc.get("id") != document_id
+            ]
+            
+            if len(self.domains["domains"][domain_id]["documents"]) < initial_count:
+                self._save_data()
+                return True
+                
+            return False
+        except Exception as e:
+            logger.error(f"Error removing document: {str(e)}")
+            return False
+    
+    def get_domain_path(self, domain_id: str) -> List[Dict[str, Any]]:
+        """
+        Get the path from root to a domain.
+        
+        Args:
+            domain_id: Domain ID
+            
+        Returns:
+            List of domains in the path
+        """
+        try:
+            path = []
+            current_id = domain_id
+            
+            while current_id is not None:
+                if current_id not in self.domains["domains"]:
+                    break
+                    
+                domain = self.domains["domains"][current_id]
+                path.insert(0, domain)
+                current_id = domain.get("parentId")
+                
+            return path
+        except Exception as e:
+            logger.error(f"Error getting domain path: {str(e)}")
+            return []
+    
+    def update_domain_positions(self, positions: Dict[str, Dict[str, float]]) -> bool:
+        """
+        Update domain positions.
+        
+        Args:
+            positions: Dictionary of domain_id -> {x, y}
+            
+        Returns:
+            Success status
+        """
+        try:
+            for domain_id, position in positions.items():
+                if domain_id in self.domains["domains"]:
+                    if "x" in position:
+                        self.domains["domains"][domain_id]["x"] = position["x"]
+                    if "y" in position:
+                        self.domains["domains"][domain_id]["y"] = position["y"]
+            
+            self._save_data()
+            return True
+        except Exception as e:
+            logger.error(f"Error updating domain positions: {str(e)}")
+            return False
+
+
+================================================
+File: backend/app/core/interest_modeler.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/core/interest_modeler.py
+"""
+app/core/interest_modeler.py
+Models user interests based on browsing history and document interactions.
+"""
+
+import os
+import numpy as np
+import time
+import json
+import pickle
+import logging
+from typing import List, Dict, Any, Tuple, Optional
+from collections import Counter, defaultdict
+
+# Import torch for device detection
+import torch
+
+# Import sentence transformers for embedding generation
+from sentence_transformers import SentenceTransformer
+
+# Import NLTK for text preprocessing
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+
+# Import FAISS for efficient similarity search
+import faiss
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import DBSCAN
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class InterestModeler:
+    """
+    Models user interests based on document interactions and queries.
+    Uses Sentence Transformers for embedding generation and FAISS for efficient similarity search.
+    """
+    
+    def __init__(self, upload_folder: str, cache_dir: str = None):
+        """
+        Initialize the interest modeler with local models.
+        
+        Args:
+            upload_folder: Path to uploaded files
+            cache_dir: Directory to cache embeddings and models
+        """
+        self.upload_folder = upload_folder
+        self.cache_dir = cache_dir or os.path.join(upload_folder, 'cache')
+        self.model_dir = os.path.join(upload_folder, 'models')
+        os.makedirs(self.cache_dir, exist_ok=True)
+        os.makedirs(self.model_dir, exist_ok=True)
+        
+        # Download NLTK resources if not available
+        try:
+            nltk.data.find('tokenizers/punkt')
+            nltk.data.find('corpora/stopwords')
+            nltk.data.find('corpora/wordnet')
+        except LookupError:
+            nltk.download('punkt')
+            nltk.download('stopwords')
+            nltk.download('wordnet')
+        
+        self.lemmatizer = WordNetLemmatizer()
+        self.stop_words = set(stopwords.words('english'))
+        
+        # Initialize device
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        # Load or initialize sentence transformer model
+        try:
+            model_path = os.path.join(self.model_dir, 'all-MiniLM-L6-v2')
+            if os.path.exists(model_path):
+                self.model = SentenceTransformer(model_path, device=self.device)
+            else:
+                self.model = SentenceTransformer('all-MiniLM-L6-v2', device=self.device)
+                self.model.save(model_path)
+        except Exception as e:
+            logger.error(f"Error loading sentence transformer: {e}")
+            # Fallback to a smaller model if available
+            try:
+                self.model = SentenceTransformer('paraphrase-MiniLM-L3-v2', device=self.device)
+            except:
+                logger.error("Failed to load even the fallback model")
+                raise
+        
+        # Initialize FAISS index for document similarity search
+        self.doc_index = None
+        self.doc_lookup = {}
+        
+        # Initialize user activity tracking
+        self.user_activities = []
+        self.user_profile = {}
+        
+        # Load saved state if available
+        self.load_state()
+        
+        # Initialize FAISS index for documents
+        self.initialize_doc_index()
+    
+    def load_state(self):
+        """Load saved state from disk."""
+        try:
+            # Load user activities
+            activities_path = os.path.join(self.cache_dir, 'user_activities.json')
+            if os.path.exists(activities_path):
+                try:
+                    with open(activities_path, 'r') as f:
+                        self.user_activities = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning("Corrupted user_activities.json file, creating new")
+                    self.user_activities = []
+            
+            # Load user profile
+            profile_path = os.path.join(self.cache_dir, 'user_profile.json')
+            if os.path.exists(profile_path):
+                try:
+                    with open(profile_path, 'r') as f:
+                        self.user_profile = json.load(f)
+                except json.JSONDecodeError:
+                    logger.warning("Corrupted user_profile.json file, creating new")
+                    self.user_profile = {'interests': {}}
+            
+            # Ensure proper structure
+            if not isinstance(self.user_profile, dict):
+                self.user_profile = {'interests': {}}
+            if 'interests' not in self.user_profile:
+                self.user_profile['interests'] = {}
+                
+        except Exception as e:
+            logger.error(f"Error loading interest modeler state: {str(e)}")
+            # Initialize with empty defaults
+            self.user_activities = []
+            self.user_profile = {'interests': {}}
+    
+    def save_state(self):
+        """Save current state to disk."""
+        try:
+            os.makedirs(self.cache_dir, exist_ok=True)
+            
+            # Ensure user_activities is a serializable list
+            if not isinstance(self.user_activities, list):
+                logger.warning("user_activities is not a list, resetting to empty list")
+                self.user_activities = []
+            
+            # Validate user_activities for JSON serializability
+            clean_activities = []
+            for activity in self.user_activities:
+                try:
+                    # Test json serialization
+                    json.dumps(activity)
+                    clean_activities.append(activity)
+                except (TypeError, OverflowError):
+                    logger.warning(f"Found non-serializable activity, skipping: {str(activity)[:100]}")
+            
+            # Save user activities
+            activities_path = os.path.join(self.cache_dir, 'user_activities.json')
+            with open(activities_path, 'w') as f:
+                json.dump(clean_activities, f, indent=2)
+            
+            # Ensure user_profile is a serializable dict
+            if not isinstance(self.user_profile, dict):
+                logger.warning("user_profile is not a dict, resetting to empty dict")
+                self.user_profile = {'interests': {}}
+            
+            # Create a clean copy for serialization
+            profile_copy = {'interests': {}}
+            if 'interests' in self.user_profile and isinstance(self.user_profile['interests'], dict):
+                for k, v in self.user_profile['interests'].items():
+                    if isinstance(v, dict) and 'score' in v:
+                        try:
+                            # Convert score to float to ensure serializability
+                            score = float(v['score'])
+                            profile_copy['interests'][k] = {
+                                'score': score,
+                                'count': int(v.get('count', 1)),
+                                'last_updated': float(v.get('last_updated', time.time()))
+                            }
+                        except (TypeError, ValueError):
+                            logger.warning(f"Invalid score value in interest {k}, skipping")
+            
+            # Save user profile
+            profile_path = os.path.join(self.cache_dir, 'user_profile.json')
+            with open(profile_path, 'w') as f:
+                json.dump(profile_copy, f, indent=2)
+                
+        except PermissionError as pe:
+            logger.error(f"Permission error saving state to {self.cache_dir}: {str(pe)}")
+        except Exception as e:
+            logger.error(f"Error saving interest modeler state: {str(e)}")
+    
+    def initialize_doc_index(self):
+        """Initialize or load FAISS index for document similarity search."""
+        index_path = os.path.join(self.cache_dir, 'faiss_index.bin')
+        lookup_path = os.path.join(self.cache_dir, 'document_lookup.pkl')
+        
+        if os.path.exists(index_path) and os.path.exists(lookup_path):
+            try:
+                self.doc_index = faiss.read_index(index_path)
+                with open(lookup_path, 'rb') as f:
+                    self.doc_lookup = pickle.load(f)
+            except Exception as e:
+                logger.error(f"Error loading index: {str(e)}")
+                self.create_new_doc_index()
+        else:
+            self.create_new_doc_index()
+    
+    def create_new_doc_index(self):
+        """Create a new FAISS index for document embeddings."""
+        dimension = self.model.get_sentence_embedding_dimension()
+        self.doc_index = faiss.IndexFlatIP(dimension)  # Inner product for cosine similarity
+        self.doc_lookup = {}
+    
+    def save_doc_index(self):
+        """Save the FAISS index and document lookup to disk."""
+        index_path = os.path.join(self.cache_dir, 'faiss_index.bin')
+        lookup_path = os.path.join(self.cache_dir, 'document_lookup.pkl')
+        
+        try:
+            faiss.write_index(self.doc_index, index_path)
+            with open(lookup_path, 'wb') as f:
+                pickle.dump(self.doc_lookup, f)
+        except Exception as e:
+            logger.error(f"Error saving index: {str(e)}")
+    
+    def preprocess_text(self, text: str) -> str:
+        """
+        Preprocess text with tokenization, stop word removal, and lemmatization.
+        
+        Args:
+            text: Raw text to preprocess
+            
+        Returns:
+            Preprocessed text
+        """
+        # Tokenize
+        tokens = word_tokenize(text.lower())
+        
+        # Remove stop words and lemmatize
+        cleaned_tokens = [
+            self.lemmatizer.lemmatize(token) 
+            for token in tokens 
+            if token.isalnum() and token not in self.stop_words
+        ]
+        
+        return " ".join(cleaned_tokens)
+    
+    def get_embedding(self, text: str) -> np.ndarray:
+        """
+        Get embedding for text using Sentence Transformers.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Embedding vector
+        """
+        try:
+            preprocessed = self.preprocess_text(text)
+            if not preprocessed:
+                preprocessed = text  # Fallback to original text if preprocessing removes everything
+            
+            embedding = self.model.encode(preprocessed)
+            return embedding
+        except Exception as e:
+            logger.error(f"Error getting embedding: {str(e)}")
+            # Return a random embedding as fallback
+            return np.random.randn(self.model.get_sentence_embedding_dimension())
+    
+    def add_document(self, document_id: str, text: str, metadata: Dict[str, Any] = None):
+        """
+        Add a document to the interest model.
+        
+        Args:
+            document_id: Unique document identifier
+            text: Document text
+            metadata: Additional document metadata
+        """
+        try:
+            # Get embedding for the document
+            embedding = self.get_embedding(text)
+            
+            # Normalize the embedding for cosine similarity
+            norm = np.linalg.norm(embedding)
+            if norm > 0:
+                embedding = embedding / norm
+            
+            # Reshape for FAISS
+            embedding_reshaped = embedding.reshape(1, -1).astype(np.float32)
+            
+            # Add to FAISS index
+            self.doc_index.add(embedding_reshaped)
+            
+            # Store document lookup information
+            idx = self.doc_index.ntotal - 1
+            self.doc_lookup[idx] = {
+                'id': document_id,
+                'metadata': metadata or {},
+                'keywords': self.extract_keywords(text, top_k=10),
+                'timestamp': time.time()
+            }
+            
+            # Save index periodically
+            if self.doc_index.ntotal % 5 == 0:
+                self.save_doc_index()
+                
+            # Track user activity with this document
+            self.track_user_activity("document_added", text[:500], {
+                'document_id': document_id,
+                'document_name': metadata.get('name', 'Unnamed document') if metadata else 'Unnamed document'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error adding document: {str(e)}")
+    
+    def find_similar_documents(self, query_text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Find documents similar to query text.
+        
+        Args:
+            query_text: Query text
+            top_k: Number of results to return
+            
+        Returns:
+            List of similar documents with scores
+        """
+        try:
+            if self.doc_index is None or self.doc_index.ntotal == 0:
+                return []
+            
+            # Get embedding for query
+            query_embedding = self.get_embedding(query_text)
+            
+            # Normalize the embedding
+            norm = np.linalg.norm(query_embedding)
+            if norm > 0:
+                query_embedding = query_embedding / norm
+            
+            # Reshape for FAISS
+            query_embedding = query_embedding.reshape(1, -1).astype(np.float32)
+            
+            # Search for similar documents
+            scores, indices = self.doc_index.search(query_embedding, min(top_k, self.doc_index.ntotal))
+            
+            # Format results
+            results = []
+            for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
+                if idx >= 0 and idx in self.doc_lookup:  # Valid index
+                    doc_info = self.doc_lookup[idx]
+                    results.append({
+                        'id': doc_info['id'],
+                        'score': float(score),
+                        'metadata': doc_info['metadata'],
+                        'keywords': doc_info.get('keywords', [])
+                    })
+            
+            # Track this query in user activity
+            self.track_user_activity("document_search", query_text, {
+                'results_count': len(results)
+            })
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error finding similar documents: {str(e)}")
+            return []
+    
+    def extract_keywords(self, text: str, top_k: int = 5) -> List[Dict[str, float]]:
+        """
+        Extract keywords from text using TF-IDF.
+        
+        Args:
+            text: Text to analyze
+            top_k: Number of keywords to extract
+            
+        Returns:
+            List of keyword objects with scores
+        """
+        try:
+            # Preprocess the text
+            preprocessed = self.preprocess_text(text)
+            if not preprocessed:
+                return []
+                
+            # Create a TF-IDF vectorizer
+            vectorizer = TfidfVectorizer(
+                max_df=0.85, 
+                min_df=2 if len(text) > 1000 else 1,  # Adjust min_df based on text length
+                max_features=500,
+                stop_words='english'
+            )
+            
+            # Apply to the single document
+            try:
+                tfidf_matrix = vectorizer.fit_transform([preprocessed])
+                feature_names = vectorizer.get_feature_names_out()
+                
+                # Get top keywords
+                dense = tfidf_matrix.todense()
+                episode = dense[0].tolist()[0]
+                scores = [(score, fnm) for fnm, score in zip(feature_names, episode)]
+                scores.sort(reverse=True)
+                
+                # Return top k keywords with scores
+                return [{'keyword': word, 'score': score} for score, word in scores[:top_k] if score > 0]
+                
+            except Exception as e:
+                # Fallback to simple word frequency for very short texts
+                words = preprocessed.split()
+                freq = Counter(words)
+                total = sum(freq.values())
+                
+                if total == 0:
+                    return []
+                
+                return [
+                    {'keyword': word, 'score': count / total} 
+                    for word, count in freq.most_common(top_k)
+                    if len(word) > 3  # Skip very short words
+                ]
+                
+        except Exception as e:
+            logger.error(f"Error extracting keywords: {str(e)}")
+            return []
+    
+    def extract_interests(self, text: str, top_k: int = 5) -> List[Dict[str, float]]:
+        """
+        Extract user interests from text.
+        
+        Args:
+            text: Text to analyze
+            top_k: Number of interests to extract
+            
+        Returns:
+            List of interest categories with confidence scores
+        """
+        try:
+            # Extract keywords as interests
+            keywords = self.extract_keywords(text, top_k=top_k)
+            
+            # Track this activity
+            self.track_user_activity("interest_extraction", text[:500], {
+                'extracted_interests': keywords
+            })
+            
+            return [{'category': kw['keyword'], 'score': kw['score']} for kw in keywords]
+                
+        except Exception as e:
+            logger.error(f"Error extracting interests: {str(e)}")
+            return []
+    
+    def track_user_activity(self, activity_type: str, content: str, metadata: Dict[str, Any] = None):
+        """
+        Track user activity for interest modeling.
+        
+        Args:
+            activity_type: Type of activity (e.g., 'query', 'document_view')
+            content: Content associated with the activity
+            metadata: Additional metadata
+        """
+        try:
+            activity = {
+                'timestamp': time.time(),
+                'type': activity_type,
+                'content': content[:1000],  # Limit content length
+                'metadata': metadata or {}
+            }
+            
+            # Add to activity list
+            self.user_activities.append(activity)
+            
+            # Limit the size of the activity list (keep last 100 activities)
+            if len(self.user_activities) > 100:
+                self.user_activities = self.user_activities[-100:]
+            
+            # Update user profile
+            self.update_user_profile(activity)
+            
+            # Save state periodically
+            if len(self.user_activities) % 5 == 0:
+                self.save_state()
+                
+        except Exception as e:
+            logger.error(f"Error tracking user activity: {str(e)}")
+    
+    def update_user_profile(self, activity: Dict[str, Any]):
+        """
+        Update user profile based on activity.
+        
+        Args:
+            activity: User activity data
+        """
+        try:
+            # Extract interests from the activity content
+            interests = self.extract_keywords(activity['content'], top_k=3)
+            
+            # Initialize interests if not present
+            if 'interests' not in self.user_profile:
+                self.user_profile['interests'] = {}
+            
+            # Update interest scores
+            for interest in interests:
+                keyword = interest['keyword']
+                score = interest['score']
+                
+                if keyword in self.user_profile['interests']:
+                    # Exponential decay for existing interests
+                    old_score = self.user_profile['interests'][keyword]['score']
+                    old_count = self.user_profile['interests'][keyword]['count']
+                    new_score = (old_score * old_count + score) / (old_count + 1)
+                    self.user_profile['interests'][keyword] = {
+                        'score': new_score,
+                        'count': old_count + 1,
+                        'last_updated': time.time()
+                    }
+                else:
+                    # Add new interest
+                    self.user_profile['interests'][keyword] = {
+                        'score': score,
+                        'count': 1,
+                        'last_updated': time.time()
+                    }
+            
+            # Age out old interests
+            current_time = time.time()
+            interests_to_remove = []
+            
+            for keyword, data in self.user_profile['interests'].items():
+                # If interest hasn't been updated in 30 days, remove it
+                if current_time - data['last_updated'] > 30 * 24 * 3600:
+                    interests_to_remove.append(keyword)
+                # Otherwise decay its score
+                else:
+                    days_old = (current_time - data['last_updated']) / (24 * 3600)
+                    decay_factor = max(0.1, 1.0 - (days_old / 30))
+                    data['score'] *= decay_factor
+            
+            # Remove aged out interests
+            for keyword in interests_to_remove:
+                del self.user_profile['interests'][keyword]
+                
+        except Exception as e:
+            logger.error(f"Error updating user profile: {str(e)}")
+    
+    def get_user_profile(self) -> Dict[str, Any]:
+        """
+        Get the current user interest profile.
+        
+        Returns:
+            User profile data
+        """
+        try:
+            # Ensure user_profile exists and is a dictionary
+            if not isinstance(self.user_profile, dict):
+                self.user_profile = {}
+                
+            # Get top interests sorted by score
+            top_interests = []
+            if 'interests' in self.user_profile and self.user_profile['interests']:
+                try:
+                    top_interests = sorted(
+                        [{'category': k, 'score': float(v['score'])} for k, v in self.user_profile['interests'].items()
+                         if isinstance(v, dict) and 'score' in v and v['score'] is not None],
+                        key=lambda x: x['score'],
+                        reverse=True
+                    )[:10]  # Limit to top 10 interests
+                except Exception as sort_error:
+                    logger.error(f"Error sorting interests: {str(sort_error)}")
+                    # Fall back to unsorted interests
+                    top_interests = [{'category': k, 'score': v.get('score', 0.0) if isinstance(v, dict) else 0.0} 
+                                   for k, v in self.user_profile['interests'].items()][:10]
+            
+            # Format the profile
+            profile = {
+                'top_interests': top_interests,
+                'activity_count': len(getattr(self, 'user_activities', [])),
+                'last_updated': time.time()
+            }
+            
+            return profile
+            
+        except Exception as e:
+            logger.error(f"Error getting user profile: {str(e)}")
+            return {'top_interests': [], 'error': str(e)}
+    
+    def add_domain_activity(self, domain_id: str, text: str):
+        """
+        Track domain-related activity.
+        
+        Args:
+            domain_id: Domain ID
+            text: Domain text (name + description)
+        """
+        metadata = {'domain_id': domain_id}
+        self.track_user_activity('domain_interaction', text, metadata)
+    
+    def add_query_activity(self, document_path: str, query: str):
+        """
+        Track document query activity.
+        
+        Args:
+            document_path: Document path
+            query: Query text
+        """
+        metadata = {'document_path': document_path}
+        self.track_user_activity('document_query', query, metadata)
+    
+    def compute_domain_distances(self, domains: List[Dict[str, Any]]) -> Dict[Tuple[str, str], float]:
+        """
+        Compute semantic distances between domains using embeddings.
+        
+        Args:
+            domains: List of domains with name and optional description
+            
+        Returns:
+            Dictionary mapping (domain1_id, domain2_id) to distance
+        """
+        try:
+            distances = {}
+            
+            # Get embeddings for each domain
+            domain_embeddings = {}
+            for domain in domains:
+                text = domain['name']
+                if 'description' in domain and domain['description']:
+                    text += ": " + domain['description']
+                    
+                embedding = self.get_embedding(text)
+                domain_embeddings[domain['id']] = embedding
+            
+            # Compute distances between all domain pairs
+            for i, domain1_id in enumerate(domain_embeddings.keys()):
+                domain1_embedding = domain_embeddings[domain1_id]
+                for domain2_id in list(domain_embeddings.keys())[i+1:]:
+                    domain2_embedding = domain_embeddings[domain2_id]
+                    
+                    # Compute cosine similarity
+                    norm1 = np.linalg.norm(domain1_embedding)
+                    norm2 = np.linalg.norm(domain2_embedding)
+                    
+                    if norm1 > 0 and norm2 > 0:
+                        similarity = np.dot(domain1_embedding, domain2_embedding) / (norm1 * norm2)
+                        # Convert to distance (0 to 1, where 0 is identical)
+                        distance = 1 - max(-1.0, min(1.0, similarity))
+                    else:
+                        distance = 0.5  # Default distance for zero norm
+                        
+                    distances[(domain1_id, domain2_id)] = distance
+                    
+                    # Also compute interest-weighted distance based on user profile
+                    # (This could be used for personalized visualization)
+                    # Right now, this is just storing the raw semantic distance
+            
+            return distances
+            
+        except Exception as e:
+            logger.error(f"Error computing domain distances: {str(e)}")
+            return {}
+
+
+================================================
+File: backend/app/core/semantic_processor.py
+================================================
+# File: ~/VerbumTechnologies/semantic-tiles4-claude/backend/app/core/semantic_processor.py
+"""
+app/core/semantic_processor.py
+Processes semantic information from documents using local models only.
+"""
+
+import os
+import numpy as np
+import logging
+from typing import Dict, List, Tuple, Optional, Any
+from collections import defaultdict
+from PyPDF2 import PdfReader
+import torch
+from transformers import pipeline, AutoTokenizer, AutoModel
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class SemanticProcessor:
+    """
+    Processes semantic information using local models only.
+    Handles document processing, embedding generation, and semantic queries.
+    """
+    
+    def __init__(self, upload_folder: str):
+        """
+        Initialize the semantic processor with local models.
+        
+        Args:
+            upload_folder: Path to uploaded files
+        """
+        self.upload_folder = upload_folder
+        self.embeddings_cache = {}
+        
+        # Initialize local models (load lazily to save memory)
+        self._summarization_model = None
+        self._qa_model = None
+        self._embedding_model = None
+        self._tokenizer = None
+        
+        # Device configuration 
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model_path = os.path.join(upload_folder, 'models')
+        os.makedirs(self.model_path, exist_ok=True)
+        
+        logger.info(f"Semantic processor initialized with device: {self.device}")
+    
+    def get_embedding_model(self):
+        """Lazy load embedding model."""
+        if self._embedding_model is None:
+            logger.info("Loading embedding model...")
+            try:
+                # First try to load from cache
+                model_path = os.path.join(self.model_path, 'sentence-transformers-all-MiniLM-L6-v2')
+                if os.path.exists(model_path):
+                    self._tokenizer = AutoTokenizer.from_pretrained(model_path)
+                    self._embedding_model = AutoModel.from_pretrained(model_path).to(self.device)
+                else:
+                    # Download if not cached
+                    self._tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+                    self._embedding_model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2').to(self.device)
+                    # Save to cache
+                    self._tokenizer.save_pretrained(model_path)
+                    self._embedding_model.save_pretrained(model_path)
+            except Exception as e:
+                logger.error(f"Error loading embedding model: {e}")
+                raise
+        return self._tokenizer, self._embedding_model
+    
+    def get_summarization_model(self):
+        """Lazy load summarization model."""
+        if self._summarization_model is None:
+            logger.info("Loading summarization model...")
+            try:
+                model_name = "facebook/bart-large-cnn"  # Smaller model for summaries
+                # Check if model exists in local cache
+                model_path = os.path.join(self.model_path, model_name.replace('/', '-'))
+                if os.path.exists(model_path):
+                    self._summarization_model = pipeline("summarization", model=model_path, device=0 if self.device == "cuda" else -1)
+                else:
+                    self._summarization_model = pipeline("summarization", model=model_name, device=0 if self.device == "cuda" else -1)
+                    # Save model to cache
+                    self._summarization_model.save_pretrained(model_path)
+            except Exception as e:
+                logger.error(f"Error loading summarization model: {e}")
+                # Fallback to a smaller model if the first one fails
+                try:
+                    self._summarization_model = pipeline("summarization", model="facebook/bart-base", device=0 if self.device == "cuda" else -1)
+                except:
+                    logger.error("Failed to load fallback model as well")
+                    raise
+        return self._summarization_model
+    
+    def get_qa_model(self):
+        """Lazy load question answering model."""
+        if self._qa_model is None:
+            logger.info("Loading QA model...")
+            try:
+                model_name = "deepset/roberta-base-squad2"
+                # Check if model exists in local cache
+                model_path = os.path.join(self.model_path, model_name.replace('/', '-'))
+                if os.path.exists(model_path):
+                    self._qa_model = pipeline("question-answering", model=model_path, device=0 if self.device == "cuda" else -1)
+                else:
+                    self._qa_model = pipeline("question-answering", model=model_name, device=0 if self.device == "cuda" else -1)
+                    # Save model to cache
+                    self._qa_model.save_pretrained(model_path)
+            except Exception as e:
+                logger.error(f"Error loading QA model: {e}")
+                raise
+        return self._qa_model
+    
+    def compute_distances(self, items: List[Dict[str, Any]], level_id: Optional[str] = None) -> Dict[Tuple[str, str], float]:
+        """
+        Compute semantic distances between items.
+        
+        Args:
+            items: List of items with name and optional description
+            level_id: Optional ID of the current level for caching
+            
+        Returns:
+            Dictionary mapping (item1_id, item2_id) to distance
+        """
+        try:
+            distances = {}
+            logger.info(f"Computing distances for {len(items)} items")
+            
+            # Get embeddings for each item
+            item_embeddings = {}
+            for item in items:
+                embedding = None
+                
+                # If item has a document path, use that for embedding
+                if 'documentPath' in item and item['documentPath']:
+                    embedding = self._get_document_embedding(item['documentPath'])
+                
+                # Otherwise use the name and description
+                if not embedding:
+                    text = item['name']
+                    if 'description' in item and item['description']:
+                        text += ": " + item['description']
+                    embedding = self._get_text_embedding(text)
+                
+                if embedding is not None:
+                    item_embeddings[item['id']] = embedding
+                else:
+                    logger.warning(f"Could not generate embedding for item: {item['name']}")
+                    # Create a random embedding as fallback to prevent crashes
+                    item_embeddings[item['id']] = np.random.rand(768)  # BERT dimension
+            
+            # Compute distances between all item pairs
+            for i, item1_id in enumerate(item_embeddings.keys()):
+                item1_embedding = item_embeddings[item1_id]
+                for item2_id in list(item_embeddings.keys())[i+1:]:
+                    item2_embedding = item_embeddings[item2_id]
+                    distance = self._compute_distance(item1_embedding, item2_embedding)
+                    distances[(item1_id, item2_id)] = distance
+            
+            return distances
+            
+        except Exception as e:
+            logger.error(f"Error computing distances: {str(e)}")
+            return {}
+    
+    def get_document_summary(self, document_path: str) -> str:
+        """
+        Get a summary of a document using a local model.
+        
+        Args:
+            document_path: Path to the document
+            
+        Returns:
+            Summary of the document
+        """
+        try:
+            # Extract text from PDF
+            full_path = os.path.join(self.upload_folder, document_path)
+            text = self._extract_text_from_pdf(full_path)
+            
+            if not text:
+                return "Could not extract text from document"
+            
+            # Get summarization model
+            summarizer = self.get_summarization_model()
+            
+            # Split text into chunks if too large (BART models have ~1024 token limit)
+            max_chunk_length = 1024
+            chunks = [text[i:i+max_chunk_length] for i in range(0, min(len(text), 4096), max_chunk_length)]
+            summaries = []
+            
+            for chunk in chunks:
+                if len(chunk.strip()) < 50:  # Skip very small chunks
+                    continue
+                try:
+                    result = summarizer(chunk, max_length=100, min_length=30, do_sample=False)
+                    summaries.append(result[0]['summary_text'])
+                except Exception as chunk_error:
+                    logger.warning(f"Error summarizing chunk: {chunk_error}")
+                    continue
+            
+            if not summaries:
+                return f"Document preview: {text[:500]}..."
+                
+            return " ".join(summaries)
+            
+        except Exception as e:
+            logger.error(f"Error getting document summary: {str(e)}")
+            return f"Error summarizing document: {str(e)}"
+    
+    def process_document_query(self, document_path: str, query: str) -> str:
+        """
+        Process a query about a document using local QA model.
+        
+        Args:
+            document_path: Path to the document
+            query: User query about the document
+            
+        Returns:
+            Response to the query
+        """
+        try:
+            # Extract text from PDF
+            full_path = os.path.join(self.upload_folder, document_path)
+            text = self._extract_text_from_pdf(full_path)
+            
+            if not text:
+                return "Could not extract text from document"
+            
+            # Get QA model
+            qa_model = self.get_qa_model()
+            
+            # Process with QA pipeline - note: most QA models have context limits
+            # So we need to find relevant sections first
+            
+            # Simple approach: split text into chunks and find most relevant chunk
+            chunk_size = 512
+            overlap = 50
+            chunks = []
+            
+            for i in range(0, len(text), chunk_size - overlap):
+                chunk = text[i:i + chunk_size]
+                if len(chunk.strip()) > 100:  # Only keep meaningful chunks
+                    chunks.append(chunk)
+            
+            if not chunks:
+                return "The document doesn't contain enough text to answer questions."
+            
+            # Find most relevant chunks using simple keyword matching
+            # (In a more advanced version, use embeddings similarity)
+            query_words = set(query.lower().split())
+            chunk_scores = []
+            
+            for chunk in chunks:
+                words = set(chunk.lower().split())
+                score = len(query_words.intersection(words))
+                chunk_scores.append(score)
+            
+            # Get top chunks
+            top_indices = sorted(range(len(chunk_scores)), key=lambda i: chunk_scores[i], reverse=True)[:3]
+            context = " ".join([chunks[i] for i in top_indices])
+            
+            # Use QA model to get answer
+            try:
+                result = qa_model(question=query, context=context)
+                answer = result['answer']
+                
+                # If confidence is low or answer is very short, provide more context
+                if result['score'] < 0.1 or len(answer.split()) < 3:
+                    return f"I'm not certain, but based on the document, I'd say: {answer}\n\nRelevant context: {context[:300]}..."
+                
+                return answer
+            except Exception as qa_error:
+                logger.error(f"QA model error: {qa_error}")
+                return f"I couldn't find a specific answer to that question. Here's the most relevant section I found:\n\n{context[:300]}..."
+                
+        except Exception as e:
+            logger.error(f"Error processing document query: {str(e)}")
+            return f"Error processing query: {str(e)}"
+    
+    def clear_cache(self):
+        """Clear the embeddings cache."""
+        self.embeddings_cache = {}
+    
+    def _extract_text_from_pdf(self, pdf_path: str) -> str:
+        """
+        Extract text from a PDF file.
+        
+        Args:
+            pdf_path: Path to the PDF file
+            
+        Returns:
+            Extracted text
+        """
+        try:
+            pdf = PdfReader(pdf_path)
+            text = ""
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            return text
+            
+        except Exception as e:
+            logger.error(f"Error extracting text from PDF: {str(e)}")
+            return ""
+    
+    def _get_document_embedding(self, document_path: str) -> Optional[np.ndarray]:
+        """
+        Get embedding for a document.
+        
+        Args:
+            document_path: Path to the document
+            
+        Returns:
+            Document embedding vector
+        """
+        try:
+            cache_key = f"doc:{document_path}"
+            if cache_key in self.embeddings_cache:
+                return self.embeddings_cache[cache_key]
+            
+            # Extract text from PDF
+            full_path = os.path.join(self.upload_folder, document_path)
+            text = self._extract_text_from_pdf(full_path)
+            
+            if not text:
+                return None
+            
+            # Generate summary for embedding
+            summary = f"Document: {os.path.basename(document_path)}\n\nContent: {text[:2000]}"
+            embedding = self._get_text_embedding(summary)
+            
+            if embedding is not None:
+                self.embeddings_cache[cache_key] = embedding
+                
+            return embedding
+            
+        except Exception as e:
+            logger.error(f"Error getting document embedding: {str(e)}")
+            return None
+    
+    def _get_text_embedding(self, text: str) -> Optional[np.ndarray]:
+        """
+        Get embedding vector for text using local model.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Embedding vector
+        """
+        try:
+            # Cache handling
+            cache_key = f"text:{hash(text)}"
+            if cache_key in self.embeddings_cache:
+                return self.embeddings_cache[cache_key]
+            
+            # Get models
+            tokenizer, model = self.get_embedding_model()
+            
+            # Tokenize and encode
+            encoded_input = tokenizer(text[:512], padding=True, truncation=True, return_tensors='pt').to(self.device)
+            
+            # Get embeddings
+            with torch.no_grad():
+                model_output = model(**encoded_input)
+                # Use mean pooling to get sentence embedding
+                token_embeddings = model_output.last_hidden_state
+                attention_mask = encoded_input['attention_mask']
+                
+                # Mask padding tokens
+                input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+                
+                # Sum the masked embeddings
+                sum_embeddings = torch.sum(token_embeddings * input_mask_expanded, 1)
+                sum_mask = torch.sum(input_mask_expanded, 1)
+                
+                # Avoid division by zero
+                sum_mask = torch.clamp(sum_mask, min=1e-9)
+                
+                # Get average embeddings
+                embeddings = sum_embeddings / sum_mask
+            
+            # Convert to numpy and store in cache
+            embedding = embeddings[0].cpu().numpy()
+            self.embeddings_cache[cache_key] = embedding
+            
+            return embedding
+            
+        except Exception as e:
+            logger.error(f"Error getting text embedding: {str(e)}")
+            # Return random vector as fallback
+            return np.random.randn(768)  # Typical embedding size for BERT-based models
+    
+    def _compute_distance(self, emb1: np.ndarray, emb2: np.ndarray) -> float:
+        """
+        Compute semantic distance between two embeddings.
+        
+        Args:
+            emb1: First embedding vector
+            emb2: Second embedding vector
+            
+        Returns:
+            Distance value (0-1, where 0 is identical)
+        """
+        try:
+            # Check if vectors are valid
+            if emb1 is None or emb2 is None or len(emb1) == 0 or len(emb2) == 0:
+                logger.warning("Invalid embedding vectors received for distance calculation")
+                return 0.5  # Return moderate distance for invalid vectors
+                
+            # Check for NaN values 
+            if np.isnan(emb1).any() or np.isnan(emb2).any():
+                logger.warning("NaN values detected in embedding vectors")
+                return 0.5
+                
+            # Normalize the vectors to avoid numerical issues
+            norm1 = np.linalg.norm(emb1)
+            norm2 = np.linalg.norm(emb2)
+            
+            if norm1 == 0 or norm2 == 0:
+                logger.warning("Zero norm encountered in embedding")
+                return 0.5
+                
+            # Compute cosine similarity and convert to distance
+            similarity = np.dot(emb1, emb2) / (norm1 * norm2)
+            
+            # Clip to valid range due to potential floating point errors
+            similarity = max(-1.0, min(1.0, similarity))
+            
+            return max(0, min(1, 1 - similarity))  # Ensure distance is between 0 and 1
+            
+        except Exception as e:
+            logger.error(f"Error computing distance: {str(e)}")
+            return 0.5  # Return moderate distance on error
+
+
+================================================
+File: frontend/package-lock.json
+================================================
 {
   "name": "semantic-tiles-frontend",
   "version": "0.1.0",
@@ -15,7 +2512,6 @@
         "d3": "^7.8.5",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "react-router-dom": "^7.3.0",
         "react-scripts": "^5.0.1",
         "web-vitals": "^2.1.4"
       }
@@ -4113,12 +6609,6 @@
         "@types/express-serve-static-core": "*",
         "@types/node": "*"
       }
-    },
-    "node_modules/@types/cookie": {
-      "version": "0.6.0",
-      "resolved": "https://registry.npmjs.org/@types/cookie/-/cookie-0.6.0.tgz",
-      "integrity": "sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==",
-      "license": "MIT"
     },
     "node_modules/@types/eslint": {
       "version": "8.56.12",
@@ -16127,55 +18617,6 @@
         "node": ">=0.10.0"
       }
     },
-    "node_modules/react-router": {
-      "version": "7.3.0",
-      "resolved": "https://registry.npmjs.org/react-router/-/react-router-7.3.0.tgz",
-      "integrity": "sha512-466f2W7HIWaNXTKM5nHTqNxLrHTyXybm7R0eBlVSt0k/u55tTCDO194OIx/NrYD4TS5SXKTNekXfT37kMKUjgw==",
-      "license": "MIT",
-      "dependencies": {
-        "@types/cookie": "^0.6.0",
-        "cookie": "^1.0.1",
-        "set-cookie-parser": "^2.6.0",
-        "turbo-stream": "2.4.0"
-      },
-      "engines": {
-        "node": ">=20.0.0"
-      },
-      "peerDependencies": {
-        "react": ">=18",
-        "react-dom": ">=18"
-      },
-      "peerDependenciesMeta": {
-        "react-dom": {
-          "optional": true
-        }
-      }
-    },
-    "node_modules/react-router-dom": {
-      "version": "7.3.0",
-      "resolved": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-7.3.0.tgz",
-      "integrity": "sha512-z7Q5FTiHGgQfEurX/FBinkOXhWREJIAB2RiU24lvcBa82PxUpwqvs/PAXb9lJyPjTs2jrl6UkLvCZVGJPeNuuQ==",
-      "license": "MIT",
-      "dependencies": {
-        "react-router": "7.3.0"
-      },
-      "engines": {
-        "node": ">=20.0.0"
-      },
-      "peerDependencies": {
-        "react": ">=18",
-        "react-dom": ">=18"
-      }
-    },
-    "node_modules/react-router/node_modules/cookie": {
-      "version": "1.0.2",
-      "resolved": "https://registry.npmjs.org/cookie/-/cookie-1.0.2.tgz",
-      "integrity": "sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==",
-      "license": "MIT",
-      "engines": {
-        "node": ">=18"
-      }
-    },
     "node_modules/react-scripts": {
       "version": "5.0.1",
       "resolved": "https://registry.npmjs.org/react-scripts/-/react-scripts-5.0.1.tgz",
@@ -17105,12 +19546,6 @@
       "engines": {
         "node": ">= 0.8.0"
       }
-    },
-    "node_modules/set-cookie-parser": {
-      "version": "2.7.1",
-      "resolved": "https://registry.npmjs.org/set-cookie-parser/-/set-cookie-parser-2.7.1.tgz",
-      "integrity": "sha512-IOc8uWeOZgnb3ptbCURJWNjWUPcO3ZnTTdzsurqERrP6nPyv+paC55vJM0LpOlT2ne+Ix+9+CRG1MNLlyZ4GjQ==",
-      "license": "MIT"
     },
     "node_modules/set-function-length": {
       "version": "1.2.2",
@@ -18503,12 +20938,6 @@
       "integrity": "sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==",
       "license": "0BSD"
     },
-    "node_modules/turbo-stream": {
-      "version": "2.4.0",
-      "resolved": "https://registry.npmjs.org/turbo-stream/-/turbo-stream-2.4.0.tgz",
-      "integrity": "sha512-FHncC10WpBd2eOmGwpmQsWLDoK4cqsA/UT/GqNoaKOQnT8uzhtCbg3EoUDMvqpOSAI0S26mr0rkjzbOO6S3v1g==",
-      "license": "ISC"
-    },
     "node_modules/type-check": {
       "version": "0.4.0",
       "resolved": "https://registry.npmjs.org/type-check/-/type-check-0.4.0.tgz",
@@ -18639,9 +21068,9 @@
       }
     },
     "node_modules/typescript": {
-      "version": "4.9.5",
-      "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.9.5.tgz",
-      "integrity": "sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==",
+      "version": "5.8.2",
+      "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.8.2.tgz",
+      "integrity": "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==",
       "license": "Apache-2.0",
       "peer": true,
       "bin": {
@@ -18649,7 +21078,7 @@
         "tsserver": "bin/tsserver"
       },
       "engines": {
-        "node": ">=4.2.0"
+        "node": ">=14.17"
       }
     },
     "node_modules/unbox-primitive": {
@@ -19829,3 +22258,2138 @@
     }
   }
 }
+
+
+
+================================================
+File: frontend/package.json
+================================================
+{
+  "name": "semantic-tiles-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": ".",
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.6.2",
+    "d3": "^7.8.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "^5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "proxy": "http://localhost:5001"
+}
+
+
+
+================================================
+File: frontend/public/index.html
+================================================
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Semantic Tiles - Hierarchical Knowledge Map"
+    />
+    <title>Semantic Tiles - Knowledge Map</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <p>Version 1</p>
+  </body>
+</html>
+
+
+
+================================================
+File: frontend/public/manifest.json
+================================================
+{
+  "short_name": "Semantic Tiles",
+  "name": "Semantic Tiles - Knowledge Map",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}
+
+
+
+================================================
+File: frontend/src/App.js
+================================================
+// File: ~/VerbumTechnologies/semantic-tiles4-claude/frontend/src/App.js
+import React, { useState, useEffect, useCallback } from 'react';
+import BreadcrumbNav from './components/BreadcrumbNav';
+import VoronoiDiagram from './components/VoronoiDiagram';
+import DomainForm from './components/DomainForm';
+import DocumentPanel from './components/DocumentPanel';
+import DocumentUpload from './components/DocumentUpload';
+import InterestVisualizer from './components/InterestVisualizer';
+import ErrorBoundary from './components/ErrorBoundary';
+import { 
+  fetchDomains, 
+  addDomain, 
+  deleteDomain, 
+  fetchDomainPath,
+  trackUserActivity 
+} from './services/apiService';
+import './styles/App.css';
+
+function App() {
+  // State for domains at the current level
+  const [domains, setDomains] = useState([]);
+  
+  // State for semantic distances
+  const [semanticDistances, setSemanticDistances] = useState({});
+  
+  // Current parent ID (null for root level)
+  const [currentParentId, setCurrentParentId] = useState(null);
+  
+  // Current domain details
+  const [currentDomain, setCurrentDomain] = useState(null);
+  
+  // Breadcrumb path
+  const [breadcrumbPath, setBreadcrumbPath] = useState([]);
+  
+  // Current document for document panel
+  const [currentDocument, setCurrentDocument] = useState(null);
+  
+  // User activity tracking for interest modeling
+  const [userActivity, setUserActivity] = useState('');
+  
+  // Loading state
+  const [loading, setLoading] = useState(false);
+  
+  // Error state
+  const [error, setError] = useState(null);
+  
+  // Success message state
+  const [success, setSuccess] = useState(null);
+  
+  // Sidebar visible state
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  
+  // Diagram dimensions
+  const diagramWidth = 800;
+  const diagramHeight = 600;
+  
+  // Helper: Track user activity
+  const trackActivity = useCallback((type, content, metadata = {}) => {
+    // Update local activity state
+    setUserActivity(prev => {
+      const combined = `${prev} ${content}`.trim();
+      return combined.length > 1000 ? combined.substring(combined.length - 1000) : combined;
+    });
+    
+    // Send to API for tracking
+    trackUserActivity(type, content, metadata).catch(err => {
+      console.error('Error tracking user activity:', err);
+      // Non-critical, so just log the error
+    });
+  }, []);
+  
+  // Load domains from API (memoized to prevent unnecessary rerenders)
+  const loadDomains = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await fetchDomains(currentParentId);
+      setDomains(data.domains || []);
+      setSemanticDistances(data.semanticDistances || {});
+      
+      // If we have domain data, cache it in sessionStorage for resilience
+      if (data.domains && data.domains.length > 0) {
+        sessionStorage.setItem(`domains:${currentParentId || 'root'}`, JSON.stringify(data.domains));
+        sessionStorage.setItem(`distances:${currentParentId || 'root'}`, JSON.stringify(data.semanticDistances || {}));
+      }
+    } catch (err) {
+      console.error('Error loading domains:', err);
+      
+      // Try to load from cache if available
+      const cachedDomains = sessionStorage.getItem(`domains:${currentParentId || 'root'}`);
+      const cachedDistances = sessionStorage.getItem(`distances:${currentParentId || 'root'}`);
+      
+      if (cachedDomains) {
+        setDomains(JSON.parse(cachedDomains));
+        setSemanticDistances(cachedDistances ? JSON.parse(cachedDistances) : {});
+        setError('Using cached data due to connection error. Some information may be outdated.');
+      } else {
+        // More specific error messages based on error type
+        if (err.response && err.response.status === 401) {
+          setError('Authentication error. Please check your API key.');
+        } else if (err.code === 'ECONNABORTED' || !err.response) {
+          setError('Network error. Please check your connection to the backend server.');
+        } else {
+          setError(`Failed to load domains: ${err.response?.data?.error || 'Unknown error'}`);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [currentParentId]);
+  
+  // Load domain path for breadcrumbs
+  const loadDomainPath = useCallback(async () => {
+    if (!currentParentId) {
+      setBreadcrumbPath([]);
+      setCurrentDomain(null);
+      return;
+    }
+    
+    try {
+      const path = await fetchDomainPath(currentParentId);
+      setBreadcrumbPath(path);
+      
+      // Set current domain
+      if (path.length > 0) {
+        const currentPathDomain = path[path.length - 1];
+        setCurrentDomain(currentPathDomain);
+        
+        // Track activity for current domain
+        trackActivity(
+          'domain_view', 
+          `Domain: ${currentPathDomain.name} - ${currentPathDomain.description || ''}`,
+          { domainId: currentPathDomain.id }
+        );
+        
+        // Cache the path for resilience
+        sessionStorage.setItem(`path:${currentParentId}`, JSON.stringify(path));
+        
+        // Display information about the current level in console for debugging
+        console.log(`Current domain: ${currentPathDomain.name}`);
+        console.log(`Children count: ${currentPathDomain.children?.length || 0}`);
+        console.log(`Documents count: ${currentPathDomain.documents?.length || 0}`);
+      }
+    } catch (err) {
+      console.error('Error loading domain path:', err);
+      
+      // Try to load from cache
+      const cachedPath = sessionStorage.getItem(`path:${currentParentId}`);
+      if (cachedPath) {
+        const parsedPath = JSON.parse(cachedPath);
+        setBreadcrumbPath(parsedPath);
+        
+        if (parsedPath.length > 0) {
+          setCurrentDomain(parsedPath[parsedPath.length - 1]);
+        }
+      }
+    }
+  }, [currentParentId, trackActivity]);
+  
+  // Load domains at the current level
+  useEffect(() => {
+    loadDomains();
+  }, [loadDomains]);
+  
+  // Load domain path when parent changes
+  useEffect(() => {
+    if (currentParentId) {
+      loadDomainPath();
+    } else {
+      setBreadcrumbPath([]);
+      setCurrentDomain(null);
+      
+      // Track activity for root level
+      trackActivity('domain_view', 'Root level', { domainId: 'root' });
+    }
+  }, [currentParentId, loadDomainPath, trackActivity]);
+  
+  // Handle adding a new domain
+  const handleAddDomain = async (name, description = '') => {
+    try {
+      await addDomain(name, currentParentId, description);
+      
+      // Track activity
+      trackActivity(
+        'domain_create', 
+        `Created domain: ${name} - ${description}`,
+        { domainName: name, parentId: currentParentId }
+      );
+      
+      // Show success message
+      setSuccess(`Successfully created ${currentParentId ? 'subdomain' : 'domain'}: ${name}`);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      
+      // Refresh domains
+      loadDomains();
+    } catch (err) {
+      console.error('Error adding domain:', err);
+      setError('Failed to add domain. Please try again.');
+    }
+  };
+  
+  // Handle deleting a domain
+  const handleDeleteDomain = async (domainId) => {
+    try {
+      setLoading(true); // Show loading state
+      
+      const domainToDelete = domains.find(d => d.id === domainId);
+      const domainName = domainToDelete ? domainToDelete.name : domainId;
+      
+      await deleteDomain(domainId);
+      
+      // Track activity
+      trackActivity(
+        'domain_delete', 
+        `Deleted domain: ${domainName}`,
+        { domainId }
+      );
+      
+      // Clear selected document if it belonged to the deleted domain
+      if (currentDocument && domains.find(d => 
+        d.documents && d.documents.some(doc => doc.id === currentDocument.id)
+      )) {
+        setCurrentDocument(null);
+      }
+      
+      // Show success message temporarily
+      setError(null);
+      const successMessage = `Successfully deleted domain: ${domainName}`;
+      setSuccess(successMessage);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null);
+      }, 3000);
+      
+      // Refresh domains
+      loadDomains();
+    } catch (err) {
+      console.error('Error deleting domain:', err);
+      setError(`Failed to delete domain: ${err.response?.data?.error || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Handle domain click for drill-down
+  const handleDomainClick = (domain) => {
+    trackActivity(
+      'domain_navigate', 
+      `Navigated to domain: ${domain.name}`,
+      { domainId: domain.id }
+    );
+    setCurrentParentId(domain.id);
+  };
+  
+  // Handle document click
+  const handleDocumentClick = (document) => {
+    trackActivity(
+      'document_view', 
+      `Viewed document: ${document.name}`,
+      { documentId: document.id, documentPath: document.path }
+    );
+    setCurrentDocument(document);
+  };
+  
+  // Handle breadcrumb navigation
+  const handleBreadcrumbClick = (domainId) => {
+    trackActivity(
+      'breadcrumb_navigate', 
+      `Navigated via breadcrumb${domainId ? ` to ${domainId}` : ' to root'}`,
+      { domainId: domainId || 'root' }
+    );
+    setCurrentParentId(domainId);
+  };
+  
+  // Handle closing the document panel
+  const handleCloseDocumentPanel = () => {
+    setCurrentDocument(null);
+  };
+  
+  // Handle document upload completion
+  const handleDocumentUpload = () => {
+    trackActivity(
+      'document_upload_complete', 
+      `Document upload completed in domain ${currentDomain?.name || 'unknown'}`,
+      { domainId: currentDomain?.id }
+    );
+    loadDomains();
+  };
+  
+  // Toggle sidebar visibility
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible);
+  };
+  
+  return (
+    <ErrorBoundary>
+      <div className="app-container">
+        <header className="app-header">
+          <div className="header-content">
+            <h1 className="app-title">Semantic Tiles - Knowledge Map</h1>
+            <button 
+              className="sidebar-toggle"
+              onClick={toggleSidebar}
+              aria-label={sidebarVisible ? "Hide interests sidebar" : "Show interests sidebar"}
+            >
+              {sidebarVisible ? "⟩" : "⟨"}
+            </button>
+          </div>
+        </header>
+        
+        <main className="main-content">
+          <div className="primary-content">
+            {/* Breadcrumb navigation */}
+            <ErrorBoundary fallback={<div>Error loading navigation. <button onClick={() => setCurrentParentId(null)}>Return to root</button></div>}>
+              <BreadcrumbNav 
+                path={breadcrumbPath} 
+                onNavigate={handleBreadcrumbClick} 
+              />
+            </ErrorBoundary>
+            
+            {/* Success message */}
+            {success && (
+              <div className="success-message">
+                {success}
+              </div>
+            )}
+            
+            {/* Domain form */}
+            <ErrorBoundary fallback={<div>Error in domain form component</div>}>
+              <DomainForm 
+                onAdd={handleAddDomain} 
+                currentDomain={currentDomain}
+                isSubdomain={currentParentId !== null}
+              />
+            </ErrorBoundary>
+            
+            {/* Document upload form (only visible when inside a domain) */}
+            {currentDomain && (
+              <ErrorBoundary fallback={<div>Error in document upload component</div>}>
+                <DocumentUpload 
+                  domainId={currentDomain.id} 
+                  onUploadComplete={handleDocumentUpload}
+                />
+              </ErrorBoundary>
+            )}
+            
+            {/* Error message */}
+            {error && (
+              <div className="error-message">
+                {error}
+                {error.includes('connection') && 
+                  <button 
+                    className="retry-button" 
+                    onClick={loadDomains}
+                  >
+                    Retry
+                  </button>
+                }
+              </div>
+            )}
+            
+            {/* Loading indicator */}
+            {loading ? (
+              <div className="loading-indicator">
+                <div className="spinner"></div>
+                <p>Loading domains...</p>
+              </div>
+            ) : (
+              <ErrorBoundary fallback={<div>Error displaying knowledge map. <button onClick={loadDomains}>Reload</button></div>}>
+                {/* Voronoi diagram */}
+                {domains.length > 0 ? (
+                  <VoronoiDiagram
+                    domains={domains}
+                    semanticDistances={semanticDistances}
+                    width={diagramWidth}
+                    height={diagramHeight}
+                    onDomainClick={handleDomainClick}
+                    onDocumentClick={handleDocumentClick}
+                    onDeleteDomain={handleDeleteDomain}
+                  />
+                ) : (
+                  <div className="empty-diagram">
+                    <p>No domains at this level. Add your first domain!</p>
+                  </div>
+                )}
+              </ErrorBoundary>
+            )}
+          </div>
+          
+          {/* Interest sidebar */}
+          {sidebarVisible && (
+            <aside className="sidebar">
+              <ErrorBoundary fallback={<div>Error loading interest tracking</div>}>
+                <InterestVisualizer
+                  userActivity={userActivity}
+                  width={300}
+                  height={300}
+                />
+              </ErrorBoundary>
+            </aside>
+          )}
+        </main>
+        
+        {/* Document panel */}
+        <ErrorBoundary fallback={<div className="document-panel-error">Error displaying document</div>}>
+          <DocumentPanel
+            document={currentDocument}
+            onClose={handleCloseDocumentPanel}
+            onQuery={(query) => trackActivity('document_query', query, {documentId: currentDocument?.id})}
+          />
+        </ErrorBoundary>
+      </div>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
+
+
+================================================
+File: frontend/src/index.js
+================================================
+// File: ~/VerbumTechnologies/semantic-tiles4-claude/frontend/src/index.js
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './styles/index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+
+================================================
+File: frontend/src/components/BreadcrumbNav.js
+================================================
+import React from 'react';
+
+/**
+ * BreadcrumbNav component for displaying the current location within the domain hierarchy
+ */
+const BreadcrumbNav = ({ path = [], onNavigate }) => {
+  return (
+    <nav className="breadcrumb-nav">
+      <ul className="breadcrumb-list">
+        <li className="breadcrumb-item">
+          <button 
+            className="breadcrumb-link" 
+            onClick={() => onNavigate(null)}
+          >
+            Home
+          </button>
+        </li>
+        
+        {path.map((item, index) => (
+          <li key={item.id} className="breadcrumb-item">
+            <span className="breadcrumb-separator">/</span>
+            <button 
+              className="breadcrumb-link" 
+              onClick={() => onNavigate(item.id)}
+              // Highlight the current domain
+              style={{
+                fontWeight: index === path.length - 1 ? 'bold' : 'normal'
+              }}
+            >
+              {item.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+};
+
+export default BreadcrumbNav;
+
+
+================================================
+File: frontend/src/components/DocumentPanel.js
+================================================
+import React, { useState, useEffect } from 'react';
+import { getDocumentContent, queryDocument } from '../services/apiService';
+
+/**
+ * DocumentPanel component for displaying document content and enabling Q&A
+ */
+const DocumentPanel = ({ document, onClose, onQuery }) => {
+  const [content, setContent] = useState('');
+  const [summary, setSummary] = useState('');
+  const [query, setQuery] = useState('');
+  const [answer, setAnswer] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [tab, setTab] = useState('content'); // 'content', 'summary', or 'qa'
+  
+  // Load document content when document changes
+  useEffect(() => {
+    if (!document) return;
+    
+    const fetchContent = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const data = await getDocumentContent(document.id);
+        setContent(data.content || '');
+        setSummary(data.summary || '');
+      } catch (err) {
+        console.error('Error fetching document content:', err);
+        setError('Failed to load document content. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchContent();
+  }, [document]);
+  
+  // Reset state when document changes
+  useEffect(() => {
+    setQuery('');
+    setAnswer(null);
+    setTab('content');
+  }, [document]);
+  
+  // Handle asking a question about the document
+  const handleAskQuestion = async (e) => {
+    e.preventDefault();
+    
+    if (!query.trim() || !document) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Track the query
+      if (onQuery) {
+        onQuery(query);
+      }
+      
+      const data = await queryDocument(document.id, query);
+      setAnswer(data.answer);
+    } catch (err) {
+      console.error('Error querying document:', err);
+      setError('Failed to process your question. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // If no document is selected, don't render anything
+  if (!document) return null;
+  
+  return (
+    <div className={`document-panel ${document ? 'open' : ''}`}>
+      <div className="document-panel-header">
+        <div className="document-info">
+          <h2 className="document-title">{document.name}</h2>
+          {document.metadata && (
+            <div className="document-metadata">
+              {document.metadata.type && (
+                <span className="document-type">{document.metadata.type}</span>
+              )}
+              {document.metadata.date && (
+                <span className="document-date">{new Date(document.metadata.date).toLocaleDateString()}</span>
+              )}
+            </div>
+          )}
+        </div>
+        <button 
+          className="close-panel-button"
+          onClick={onClose}
+          aria-label="Close document panel"
+        >
+          
+        </button>
+      </div>
+      
+      <div className="document-panel-tabs">
+        <button 
+          className={`tab-button ${tab === 'content' ? 'active' : ''}`}
+          onClick={() => setTab('content')}
+        >
+          Content
+        </button>
+        <button 
+          className={`tab-button ${tab === 'summary' ? 'active' : ''}`}
+          onClick={() => setTab('summary')}
+        >
+          Summary
+        </button>
+        <button 
+          className={`tab-button ${tab === 'qa' ? 'active' : ''}`}
+          onClick={() => setTab('qa')}
+        >
+          Ask Questions
+        </button>
+      </div>
+      
+      <div className="document-panel-content">
+        {loading ? (
+          <div className="document-loading">
+            <div className="spinner"></div>
+            <p>Loading...</p>
+          </div>
+        ) : error ? (
+          <div className="document-error">{error}</div>
+        ) : tab === 'content' ? (
+          <div className="document-content">
+            {content ? (
+              <pre>{content}</pre>
+            ) : (
+              <p className="no-content">No content available for this document.</p>
+            )}
+          </div>
+        ) : tab === 'summary' ? (
+          <div className="document-summary">
+            {summary ? (
+              <p>{summary}</p>
+            ) : (
+              <p className="no-content">No summary available for this document.</p>
+            )}
+          </div>
+        ) : (
+          <div className="document-qa">
+            <form onSubmit={handleAskQuestion} className="question-form">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Ask a question about this document..."
+                className="question-input"
+              />
+              <button 
+                type="submit" 
+                className="ask-button"
+                disabled={!query.trim() || loading}
+              >
+                Ask
+              </button>
+            </form>
+            
+            {answer && (
+              <div className="answer-container">
+                <h3 className="answer-label">Answer:</h3>
+                <p className="answer-text">{answer}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DocumentPanel;
+
+
+================================================
+File: frontend/src/components/DocumentUpload.js
+================================================
+import React, { useState } from 'react';
+import { uploadDocument } from '../services/apiService';
+
+/**
+ * DocumentUpload component for uploading documents to a domain
+ */
+const DocumentUpload = ({ domainId, onUploadComplete }) => {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      setError(null);
+    }
+  };
+  
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    
+    if (!file || !domainId) return;
+    
+    setUploading(true);
+    setProgress(0);
+    setError(null);
+    setSuccess(false);
+    
+    try {
+      await uploadDocument(domainId, file, (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        setProgress(percentCompleted);
+      });
+      
+      setSuccess(true);
+      setFile(null);
+      
+      // Reset the file input
+      const fileInput = document.getElementById('document-file');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
+      // Notify parent about upload completion
+      if (onUploadComplete) {
+        onUploadComplete();
+      }
+      
+      // Reset success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error('Error uploading document:', err);
+      setError(err.response?.data?.error || 'Failed to upload document. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  return (
+    <div className="document-upload">
+      <h3 className="upload-title">Upload Document</h3>
+      
+      <form onSubmit={handleUpload} className="upload-form">
+        <div className="file-input-container">
+          <input
+            id="document-file"
+            type="file"
+            onChange={handleFileChange}
+            accept=".pdf,.txt,.md,.doc,.docx"
+            disabled={uploading}
+          />
+          {file && (
+            <div className="selected-file">
+              <span className="file-name">{file.name}</span>
+              <span className="file-size">({Math.round(file.size / 1024)} KB)</span>
+            </div>
+          )}
+        </div>
+        
+        {uploading && (
+          <div className="upload-progress">
+            <div 
+              className="progress-bar"
+              style={{ width: `${progress}%` }}
+            ></div>
+            <span className="progress-text">{progress}%</span>
+          </div>
+        )}
+        
+        {error && (
+          <div className="upload-error">{error}</div>
+        )}
+        
+        {success && (
+          <div className="upload-success">Document uploaded successfully!</div>
+        )}
+        
+        <button 
+          type="submit" 
+          className="upload-button"
+          disabled={!file || uploading}
+        >
+          {uploading ? 'Uploading...' : 'Upload Document'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
+export default DocumentUpload;
+
+
+================================================
+File: frontend/src/components/DomainForm.js
+================================================
+import React, { useState } from 'react';
+
+/**
+ * DomainForm component for creating new domain nodes
+ */
+const DomainForm = ({ onAdd, currentDomain, isSubdomain }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (name.trim() === '') return;
+    
+    onAdd(name.trim(), description.trim());
+    setName('');
+    setDescription('');
+    setIsExpanded(false);
+  };
+  
+  return (
+    <div className="domain-form">
+      {isExpanded ? (
+        <form onSubmit={handleSubmit}>
+          {/* Added header showing current parent domain if adding a subdomain */}
+          <div className="form-header">
+            {isSubdomain ? (
+              <h3 className="subdomain-header">
+                Add Subdomain to "{currentDomain?.name || 'Domain'}"
+              </h3>
+            ) : (
+              <h3>Add Domain</h3>
+            )}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="domain-name">
+              {isSubdomain ? 'Subdomain Name' : 'Domain Name'}
+            </label>
+            <input
+              id="domain-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={isSubdomain ? 
+                `Enter subdomain name for ${currentDomain?.name}...` : 
+                "Enter domain name..."}
+              required
+              autoFocus
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="domain-description">Description (optional)</label>
+            <textarea
+              id="domain-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter domain description..."
+              rows={3}
+            />
+          </div>
+          
+          <div className="form-actions">
+            <button 
+              type="button" 
+              className="cancel-button"
+              onClick={() => setIsExpanded(false)}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="submit-button"
+              disabled={name.trim() === ''}
+            >
+              {isSubdomain ? 'Add Subdomain' : 'Add Domain'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button 
+          className="add-domain-button" 
+          onClick={() => setIsExpanded(true)}
+        >
+          {isSubdomain ? `+ Add Subdomain to "${currentDomain?.name}"` : '+ Add Domain'}
+        </button>
+      )}
+    </div>
+  );
+};
+
+export default DomainForm;
+
+
+================================================
+File: frontend/src/components/ErrorBoundary.js
+================================================
+import React from 'react';
+
+/**
+ * ErrorBoundary component for catching and displaying React errors
+ */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render shows the fallback UI
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // Log the error to console
+    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render fallback UI if provided, otherwise default error message
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+      
+      return (
+        <div className="error-boundary">
+          <h2>Something went wrong.</h2>
+          <p className="error-message">
+            {this.state.error && this.state.error.toString()}
+          </p>
+          <button 
+            className="error-retry"
+            onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default ErrorBoundary;
+
+
+================================================
+File: frontend/src/components/InterestVisualizer.js
+================================================
+// File: ~/VerbumTechnologies/semantic-tiles4-claude/frontend/src/components/InterestVisualizer.js
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import * as d3 from 'd3';
+import { extractInterests, getUserProfile, findSimilarDocuments } from '../services/apiService';
+import '../styles/InterestVisualizer.css';
+
+/**
+ * InterestVisualizer component for displaying and tracking user interests
+ */
+const InterestVisualizer = ({ userActivity, width = 300, height = 300 }) => {
+  const [interests, setInterests] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'current'
+  
+  const svgRef = useRef(null);
+  const activityTimeoutRef = useRef(null);
+  
+  // Load user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await getUserProfile();
+        setUserProfile(data.profile);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError('Could not load user profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserProfile();
+    
+    // Refresh the profile periodically
+    const intervalId = setInterval(() => {
+      fetchUserProfile();
+    }, 60000); // Every minute
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
+  // Process user activity with debounce
+  useEffect(() => {
+    if (!userActivity || userActivity.trim() === '') return;
+    
+    // Clear existing timeout
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current);
+    }
+    
+    // Set a new timeout for debouncing
+    activityTimeoutRef.current = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const data = await extractInterests(userActivity);
+        setInterests(data.interests || []);
+      } catch (err) {
+        console.error('Error extracting interests:', err);
+        setError('Failed to extract interests');
+      } finally {
+        setLoading(false);
+      }
+    }, 1000);
+    
+    return () => {
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current);
+      }
+    };
+  }, [userActivity]);
+  
+  // Get recommendations based on interests
+  const getRecommendations = useCallback(async () => {
+    try {
+      const interestsToUse = activeTab === 'profile' 
+        ? (userProfile?.top_interests || [])
+        : interests;
+        
+      if (interestsToUse.length === 0) return;
+      
+      // Use the findSimilarDocuments API with the top interest as query
+      const topInterest = interestsToUse[0]?.category || '';
+      if (!topInterest) return;
+      
+      const results = await findSimilarDocuments(topInterest, 3);
+      setRecommendations(results.similar_documents || []);
+    } catch (err) {
+      console.error('Error getting recommendations:', err);
+    }
+  }, [activeTab, userProfile, interests]);
+  
+  // Update recommendations when interests change
+  useEffect(() => {
+    getRecommendations();
+  }, [interests, userProfile, activeTab, getRecommendations]);
+  
+  // Render interests chart
+  useEffect(() => {
+    const data = activeTab === 'profile' 
+      ? (userProfile?.top_interests || [])
+      : interests;
+      
+    if (!svgRef.current || data.length === 0) return;
+    
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    
+    const margin = { top: 40, right: 20, bottom: 70, left: 50 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+    
+    // Create scales
+    const xScale = d3.scaleBand()
+      .domain(data.map(d => d.category))
+      .range([0, innerWidth])
+      .padding(0.2);
+    
+    const yScale = d3.scaleLinear()
+      .domain([0, d3.max(data, d => d.score) * 1.1 || 1])
+      .range([innerHeight, 0]);
+    
+    // Create chart group
+    const g = svg.append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+    
+    // Add x-axis
+    g.append('g')
+      .attr('class', 'x-axis')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(xScale))
+      .selectAll('text')
+      .attr('transform', 'rotate(-45)')
+      .attr('text-anchor', 'end')
+      .attr('dx', '-.8em')
+      .attr('dy', '.15em');
+    
+    // Add y-axis
+    g.append('g')
+      .attr('class', 'y-axis')
+      .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => `${(d * 100).toFixed(0)}%`));
+    
+    // Add title
+    g.append('text')
+      .attr('class', 'chart-title')
+      .attr('x', innerWidth / 2)
+      .attr('y', -15)
+      .attr('text-anchor', 'middle')
+      .text(activeTab === 'profile' ? 'User Interest Profile' : 'Current Activity Interests');
+    
+    // Add bars
+    g.selectAll('.bar')
+      .data(data)
+      .enter()
+      .append('rect')
+      .attr('class', 'bar')
+      .attr('x', d => xScale(d.category))
+      .attr('y', d => yScale(d.score))
+      .attr('width', xScale.bandwidth())
+      .attr('height', d => innerHeight - yScale(d.score))
+      .attr('fill', (d, i) => {
+        const colorScale = d3.scaleSequential(d3.interpolateBlues)
+          .domain([0, data.length - 1]);
+        return colorScale(i);
+      });
+    
+    // Add labels
+    g.selectAll('.label')
+      .data(data)
+      .enter()
+      .append('text')
+      .attr('class', 'bar-label')
+      .attr('x', d => xScale(d.category) + xScale.bandwidth() / 2)
+      .attr('y', d => yScale(d.score) - 5)
+      .attr('text-anchor', 'middle')
+      .text(d => `${(d.score * 100).toFixed(0)}%`);
+    
+  }, [interests, userProfile, activeTab, width, height]);
+  
+  return (
+    <div className="interest-visualizer">
+      <div className="tabs">
+        <button 
+          className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          User Profile
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'current' ? 'active' : ''}`}
+          onClick={() => setActiveTab('current')}
+        >
+          Current Activity
+        </button>
+      </div>
+      
+      {loading ? (
+        <div className="interest-loading">
+          <div className="spinner"></div>
+          <p>Analyzing interests...</p>
+        </div>
+      ) : error ? (
+        <div className="interest-error">{error}</div>
+      ) : (activeTab === 'profile' && (!userProfile?.top_interests || userProfile.top_interests.length === 0)) ? (
+        <div className="interest-empty">Your interest profile is still being built. Keep interacting with content!</div>
+      ) : (activeTab === 'current' && interests.length === 0) ? (
+        <div className="interest-empty">No interests detected in current activity. Try viewing or searching documents.</div>
+      ) : (
+        <svg ref={svgRef} width={width} height={height}></svg>
+      )}
+      
+      {recommendations.length > 0 && (
+        <div className="recommendations-section">
+          <h4 className="recommendations-title">Recommended Content</h4>
+          <ul className="recommendations-list">
+            {recommendations.map(rec => (
+              <li key={rec.id} className="recommendation-item">
+                <div className="recommendation-name">{rec.metadata.name}</div>
+                <div className="recommendation-score">
+                  {Math.round(rec.score * 100)}% match
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default InterestVisualizer;
+
+
+================================================
+File: frontend/src/components/VoronoiDiagram.js
+================================================
+import React, { useEffect, useRef, useState } from 'react';
+import * as d3 from 'd3';
+
+/**
+ * VoronoiDiagram component for visualizing domains and their relationships
+ */
+const VoronoiDiagram = ({ 
+  domains = [], 
+  semanticDistances = {}, 
+  width = 800, 
+  height = 600, 
+  onDomainClick, 
+  onDocumentClick,
+  onDeleteDomain
+}) => {
+  const svgRef = useRef(null);
+  const [selectedDomain, setSelectedDomain] = useState(null);
+  
+  // Create the diagram whenever domains or semanticDistances change
+  useEffect(() => {
+    if (!svgRef.current || domains.length === 0) return;
+    
+    // Clear previous diagram
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    
+    // Create a simple force-directed layout for now
+    const simulation = d3.forceSimulation(domains)
+      .force('charge', d3.forceManyBody().strength(-200))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(60));
+    
+    // Distance-based forces using semantic distances
+    if (Object.keys(semanticDistances).length > 0) {
+      const links = [];
+      
+      // Create links between domains based on semantic distances
+      for (let i = 0; i < domains.length; i++) {
+        for (let j = i + 1; j < domains.length; j++) {
+          const source = domains[i].id;
+          const target = domains[j].id;
+          const distanceKey = `${source}|${target}`;
+          const reverseKey = `${target}|${source}`;
+          
+          if (semanticDistances[distanceKey] || semanticDistances[reverseKey]) {
+            const distance = semanticDistances[distanceKey] || semanticDistances[reverseKey];
+            links.push({
+              source: i,
+              target: j,
+              distance: distance
+            });
+          }
+        }
+      }
+      
+      // Add force based on semantic distances
+      simulation.force('link', d3.forceLink(links)
+        .id((d, i) => i)
+        .distance(d => Math.max(100, 200 * (1 - d.distance))));
+    }
+    
+    // Create the main group
+    const g = svg.append('g');
+    
+    // Add zoom behavior
+    svg.call(d3.zoom()
+      .extent([[0, 0], [width, height]])
+      .scaleExtent([0.5, 5])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+      }));
+    
+    // Create domain nodes
+    const domainNodes = g.selectAll('.domain-node')
+      .data(domains)
+      .enter()
+      .append('g')
+      .attr('class', 'domain-node')
+      .attr('cursor', 'pointer')
+      .on('click', (event, d) => {
+        // Simple click to select AND navigate
+        event.stopPropagation();
+        
+        // Navigate directly into the domain
+        onDomainClick(d);
+      });
+      
+    // Add tooltip for navigation hint
+    domainNodes.append('title')
+      .text(d => {
+        const hasChildren = d.children && d.children.length > 0;
+        return `${d.name}${hasChildren ? ' (click to view subdomains)' : ''}`;
+      });
+    
+    // Add domain circles
+    domainNodes.append('circle')
+      .attr('r', d => Math.max(30, Math.min(50, 10 + d.documents?.length * 5 || 30)))
+      .attr('fill', (d, i) => {
+        const color = d3.scaleOrdinal(d3.schemeCategory10);
+        return color(i);
+      })
+      // Add special stroke for domains with children to indicate they can be navigated
+      .attr('stroke', d => d.children && d.children.length > 0 ? '#FFD700' : '#fff')
+      .attr('stroke-width', d => d.children && d.children.length > 0 ? 3 : 2);
+    
+    // Add domain labels
+    domainNodes.append('text')
+      .text(d => d.name)
+      .attr('text-anchor', 'middle')
+      .attr('dy', 5)
+      .attr('fill', '#fff')
+      .attr('font-weight', 'bold')
+      .attr('font-size', '14px')
+      .attr('pointer-events', 'none');
+    
+    // Add indicator for domains with children
+    domainNodes.filter(d => d.children && d.children.length > 0)
+      .append('text')
+      .text('▼')
+      .attr('text-anchor', 'middle')
+      .attr('dy', -25)
+      .attr('fill', '#FFD700')
+      .attr('font-weight', 'bold')
+      .attr('font-size', '12px')
+      .attr('pointer-events', 'none');
+    
+    // Add delete button to each domain
+    domainNodes.each(function(d) {
+      const node = d3.select(this);
+      
+      // Add delete button (small circle with X)
+      const deleteGroup = node.append('g')
+        .attr('class', 'delete-button')
+        .attr('transform', `translate(30, -30)`)
+        .style('opacity', 0)  // Hidden by default
+        .on('click', (event) => {
+          event.stopPropagation();
+          if (window.confirm(`Are you sure you want to delete the domain "${d.name}"?`)) {
+            onDeleteDomain(d.id);
+          }
+        });
+        
+      // Delete button background
+      deleteGroup.append('circle')
+        .attr('r', 12)
+        .attr('fill', '#dc3545')
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 1.5);
+        
+      // X symbol
+      deleteGroup.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', 4)
+        .attr('fill', '#fff')
+        .attr('font-weight', 'bold')
+        .attr('pointer-events', 'none')
+        .text('×');
+    });
+    
+    // Show delete button on hover
+    domainNodes.on('mouseover', function() {
+      d3.select(this).select('.delete-button')
+        .transition()
+        .duration(200)
+        .style('opacity', 1);
+    })
+    .on('mouseout', function() {
+      d3.select(this).select('.delete-button')
+        .transition()
+        .duration(200)
+        .style('opacity', 0);
+    });
+    
+    // Update positions on simulation tick
+    simulation.on('tick', () => {
+      domainNodes.attr('transform', d => {
+        // Keep nodes within bounds
+        d.x = Math.max(60, Math.min(width - 60, d.x));
+        d.y = Math.max(60, Math.min(height - 60, d.y));
+        return `translate(${d.x},${d.y})`;
+      });
+    });
+    
+    // Clear selected domain on svg click
+    svg.on('click', () => setSelectedDomain(null));
+    
+    return () => {
+      simulation.stop();
+    };
+  }, [domains, semanticDistances, width, height, selectedDomain, onDomainClick, onDocumentClick, onDeleteDomain]);
+  
+  return (
+    <div className="voronoi-diagram">
+      <svg 
+        ref={svgRef} 
+        width={width} 
+        height={height}
+        className="diagram-svg"
+      ></svg>
+    </div>
+  );
+};
+
+export default VoronoiDiagram;
+
+
+================================================
+File: frontend/src/services/apiService.js
+================================================
+// File: ~/VerbumTechnologies/semantic-tiles4-claude/frontend/src/services/apiService.js
+import axios from 'axios';
+
+// Use an environment variable for the base URL in production
+const baseURL = process.env.REACT_APP_BACKEND_URL
+  ? `${process.env.REACT_APP_BACKEND_URL}/api`
+  : '/api';
+
+// Create an axios instance with timeout
+const api = axios.create({
+  baseURL,
+  timeout: 30000, // 30 seconds timeout
+});
+
+/**
+ * Fetch domains at a specific level
+ * @param {string|null} parentId - Parent domain ID or null for root level
+ * @returns {Promise<Object>} - Domains and semantic distances
+ */
+export const fetchDomains = async (parentId = null) => {
+  try {
+    const url = parentId 
+      ? `/domains?parentId=${parentId}`
+      : `/domains`;
+    const response = await api.get(url);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching domains:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a single domain by ID
+ * @param {string} domainId - Domain ID
+ * @returns {Promise<Object>} - Domain data
+ */
+export const fetchDomain = async (domainId) => {
+  try {
+    const response = await api.get(`/domains/${domainId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching domain:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch the path to a domain
+ * @param {string} domainId - Domain ID
+ * @returns {Promise<Array>} - Path to the domain
+ */
+export const fetchDomainPath = async (domainId) => {
+  try {
+    const response = await api.get(`/domains/${domainId}/path`);
+    return response.data.path;
+  } catch (error) {
+    console.error('Error fetching domain path:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add a new domain
+ * @param {string} name - Domain name
+ * @param {string|null} parentId - Parent domain ID or null for root level
+ * @param {string} description - Domain description
+ * @returns {Promise<Object>} - New domain data
+ */
+export const addDomain = async (name, parentId = null, description = '') => {
+  try {
+    const response = await api.post(`/domains`, {
+      name,
+      parentId,
+      description
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding domain:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update a domain
+ * @param {string} domainId - Domain ID
+ * @param {Object} updates - Updates to apply
+ * @returns {Promise<Object>} - Updated domain data
+ */
+export const updateDomain = async (domainId, updates) => {
+  try {
+    const response = await api.put(`/domains/${domainId}`, updates);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating domain:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a domain
+ * @param {string} domainId - Domain ID
+ * @returns {Promise<Object>} - Success status
+ */
+export const deleteDomain = async (domainId) => {
+  try {
+    const response = await api.delete(`/domains/${domainId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting domain:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update domain positions
+ * @param {Object} positions - Dictionary of domain_id -> {x, y}
+ * @returns {Promise<Object>} - Success status
+ */
+export const updateDomainPositions = async (positions) => {
+  try {
+    const response = await api.post(`/domains/positions`, {
+      positions
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating domain positions:', error);
+    throw error;
+  }
+};
+
+/**
+ * Upload a document to a domain
+ * @param {string} domainId - Domain ID
+ * @param {File} file - Document file
+ * @param {Function} onProgress - Progress callback
+ * @returns {Promise<Object>} - Document data
+ */
+export const uploadDocument = async (domainId, file, onProgress = null) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('domainId', domainId);
+    
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    };
+    
+    if (onProgress) {
+      config.onUploadProgress = onProgress;
+    }
+    
+    const response = await api.post(
+      `/domains/${domainId}/documents`, 
+      formData,
+      config
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a document from a domain
+ * @param {string} domainId - Domain ID
+ * @param {string} documentId - Document ID
+ * @returns {Promise<Object>} - Success status
+ */
+export const removeDocument = async (domainId, documentId) => {
+  try {
+    const response = await api.delete(
+      `/domains/${domainId}/documents/${documentId}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error removing document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get document content by ID
+ * @param {string} documentId - Document ID
+ * @returns {Promise<Object>} - Document content and summary
+ */
+export const getDocumentContent = async (documentId) => {
+  try {
+    const response = await api.get(`/documents/${documentId}/content`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting document content:', error);
+    throw error;
+  }
+};
+
+/**
+ * Query a document
+ * @param {string} documentId - Document ID
+ * @param {string} query - Query text
+ * @returns {Promise<Object>} - Query response
+ */
+export const queryDocument = async (documentId, query) => {
+  try {
+    const response = await api.post(
+      `/documents/${documentId}/query`,
+      { query }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error querying document:', error);
+    throw error;
+  }
+};
+
+/**
+ * Extract user interests from text
+ * @param {string} text - Text to analyze
+ * @returns {Promise<Object>} - Extracted interests
+ */
+export const extractInterests = async (text) => {
+  try {
+    const response = await api.post('/interests/extract', { text });
+    return response.data;
+  } catch (error) {
+    console.error('Error extracting interests:', error);
+    throw error;
+  }
+};
+
+/**
+ * Find documents similar to a query
+ * @param {string} query - Query text
+ * @param {number} topK - Number of results to return
+ * @returns {Promise<Object>} - Similar documents
+ */
+export const findSimilarDocuments = async (query, topK = 5) => {
+  try {
+    const response = await api.post('/documents/similar', { 
+      query,
+      top_k: topK
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error finding similar documents:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get the current user interest profile
+ * @returns {Promise<Object>} - User profile data
+ */
+export const getUserProfile = async () => {
+  try {
+    const response = await api.get('/interests/user-profile');
+    return response.data;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Track user activity for interest modeling
+ * @param {string} type - Activity type
+ * @param {string} content - Activity content
+ * @param {Object} metadata - Additional metadata
+ * @returns {Promise<Object>} - Success status
+ */
+export const trackUserActivity = async (type, content, metadata = {}) => {
+  try {
+    const response = await api.post('/interests/track-activity', {
+      type,
+      content,
+      metadata
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error tracking activity:', error);
+    throw error;
+  }
+};
+
+
+================================================
+File: frontend/src/styles/App.css
+================================================
+/* Add these styles to your App.css file */
+
+/* Success message styling */
+.success-message {
+  padding: 1rem;
+  background-color: #d1fae5;
+  color: #065f46;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  max-width: 800px;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Enhanced breadcrumb navigation */
+.breadcrumb-nav {
+  background-color: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.breadcrumb-list {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-separator {
+  margin: 0 0.5rem;
+  color: #64748b;
+}
+
+.breadcrumb-link {
+  color: #0369a1;
+  background: none;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.breadcrumb-link:hover {
+  background-color: #e0f2fe;
+  text-decoration: underline;
+}
+
+.current-location-info {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.current-location-info p {
+  margin: 0.25rem 0;
+  color: #334155;
+}
+
+.domain-description {
+  font-style: italic;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+/* Domain form enhancements */
+.domain-form {
+  background-color: #f8fafc;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.form-header {
+  margin-bottom: 1rem;
+}
+
+.form-header h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.subdomain-header {
+  color: #0369a1;
+  display: flex;
+  align-items: center;
+}
+
+.subdomain-header::before {
+  content: '↳';
+  margin-right: 0.5rem;
+  font-weight: bold;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.cancel-button {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.submit-button {
+  background-color: #0369a1;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.submit-button:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.add-domain-button {
+  background-color: #0369a1;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.add-domain-button:hover {
+  background-color: #0284c7;
+}
+
+
+================================================
+File: frontend/src/styles/InterestVisualizer.css
+================================================
+/* File: ~/VerbumTechnologies/semantic-tiles4-claude/frontend/src/styles/InterestVisualizer.css */
+.interest-visualizer {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tab-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+
+.interest-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  color: #6b7280;
+}
+
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.interest-error {
+  padding: 1rem;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.interest-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+  font-size: 0.875rem;
+  background-color: #f9fafb;
+  border-radius: 0.375rem;
+}
+
+.chart-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  fill: #4b5563;
+}
+
+.bar {
+  transition: fill-opacity 0.3s ease;
+}
+
+.bar:hover {
+  fill-opacity: 0.8;
+}
+
+.bar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  fill: #4b5563;
+}
+
+.x-axis text {
+  font-size: 0.75rem;
+  fill: #6b7280;
+}
+
+.x-axis path,
+.x-axis line,
+.y-axis path,
+.y-axis line {
+  stroke: #d1d5db;
+}
+
+.y-axis text {
+  font-size: 0.75rem;
+  fill: #6b7280;
+}
+
+.recommendations-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.recommendations-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.recommendations-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recommendation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: #f9fafb;
+  margin-bottom: 0.5rem;
+}
+
+.recommendation-name {
+  font-size: 0.813rem;
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.recommendation-score {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #3b82f6;
+  padding: 0.25rem 0.5rem;
+  background-color: #eff6ff;
+  border-radius: 0.25rem;
+}
+
+
+================================================
+File: frontend/src/styles/index.css
+================================================
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+

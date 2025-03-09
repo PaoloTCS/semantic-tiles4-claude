@@ -56,3 +56,11 @@ The codebase follows a clean, modular architecture with separation of concerns b
 2. Enable AI to read documents and create domains/subdomains based on content
 3. Improve domain visualization with better scaling and zooming capabilities
 
+## Notes For re starts
+
+Bash(cd /Users/paolopignatelli/VerbumTechnologies/semantic-tiles4-claude && echo "1. First run: python backend/reset.py …
+      to reset the application data\n2. Then start the backend: python backend/run.py\n3. Finally start the frontend in a
+      separate terminal: cd frontend && npm start")
+  ⎿  1. First run: python backend/reset.py to reset the application data
+     2. Then start the backend: python backend/run.py
+     3. Finally start the frontend in a separate terminal: cd frontend && npm start

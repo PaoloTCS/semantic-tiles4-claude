@@ -18,9 +18,11 @@ def create_app(env):
                 static_folder='static')
     # Allow requests from local development and the Netlify deployment
     CORS(app, resources={r"/*": {"origins": [
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "https://semantic-tiles4.netlify.app"
+       "http://localhost:3000", 
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",  # Add this line
+    "http://127.0.0.1:3001",  # Add this line
+    "https://semantic-tiles4.netlify.app"
     ]}})
     
     # Configuration

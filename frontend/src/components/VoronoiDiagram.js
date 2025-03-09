@@ -16,6 +16,7 @@ const VoronoiDiagram = ({
 }) => {
   const svgRef = useRef(null);
   const [selectedDomain, setSelectedDomain] = useState(null);
+  const [highlightedDomainId, setHighlightedDomainId] = useState(null);
   
   // Create the diagram whenever domains or semanticDistances change
   useEffect(() => {
@@ -95,6 +96,9 @@ const VoronoiDiagram = ({
       // First stop event propagation
       event.stopPropagation();
       
+      // Highlight this domain
+      setHighlightedDomainId(d.id);
+      
       // Select this domain for viewing
       setSelectedDomain(d);
       
@@ -127,9 +131,16 @@ const VoronoiDiagram = ({
         const color = d3.scaleOrdinal(d3.schemeCategory10);
         return color(i);
       })
-      // Add special stroke for domains with children to indicate they can be navigated
-      .attr('stroke', d => d.children && d.children.length > 0 ? '#FFD700' : '#fff')
-      .attr('stroke-width', d => d.children && d.children.length > 0 ? 3 : 2);
+      // Add special stroke for highlighted domain and domains with children
+      .attr('stroke', d => {
+        if (d.id === highlightedDomainId) return '#FF4500'; // Bright orange for highlighted
+        return d.children && d.children.length > 0 ? '#FFD700' : '#fff';
+      })
+      // Make the stroke wider for the highlighted domain
+      .attr('stroke-width', d => {
+        if (d.id === highlightedDomainId) return 5; // Thicker for highlighted
+        return d.children && d.children.length > 0 ? 3 : 2;
+      });
     
     // Add domain labels
     domainNodes.append('text')
@@ -277,9 +288,9 @@ const VoronoiDiagram = ({
           .append('path')
           .attr('d', (d, i) => voronoi.renderCell(i))
           .attr('fill', 'none')
-          .attr('stroke', '#aaa')
-          .attr('stroke-width', 1)
-          .attr('opacity', 0.5);
+          .attr('stroke', d => d.id === highlightedDomainId ? '#FF4500' : '#aaa')
+          .attr('stroke-width', d => d.id === highlightedDomainId ? 3 : 1)
+          .attr('opacity', d => d.id === highlightedDomainId ? 0.8 : 0.5);
           
         // Draw Delaunay edges with distances
         edgesGroup.selectAll('*').remove();
@@ -328,7 +339,7 @@ const VoronoiDiagram = ({
     return () => {
       simulation.stop();
     };
-  }, [domains, semanticDistances, width, height, onDomainClick, onDocumentClick, onDeleteDomain, onViewDomain]);
+  }, [domains, semanticDistances, width, height, onDomainClick, onDocumentClick, onDeleteDomain, onViewDomain, highlightedDomainId]);
   
   return (
     <div className="voronoi-diagram">

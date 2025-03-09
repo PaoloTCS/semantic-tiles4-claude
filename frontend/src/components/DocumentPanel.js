@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getDocumentContent, queryDocument } from '../services/apiService';
+import DocumentViewer from './DocumentViewer';
 
 /**
  * DocumentPanel component for displaying document content and enabling Q&A
@@ -127,11 +128,8 @@ const DocumentPanel = ({ document, onClose, onQuery }) => {
           <div className="document-error">{error}</div>
         ) : tab === 'content' ? (
           <div className="document-content">
-            {content ? (
-              <pre>{content}</pre>
-            ) : (
-              <p className="no-content">No content available for this document.</p>
-            )}
+            {/* Show PDF viewer for content tab */}
+            <DocumentViewer documentId={document?.id} />
           </div>
         ) : tab === 'summary' ? (
           <div className="document-summary">
